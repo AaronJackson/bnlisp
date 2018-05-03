@@ -305,7 +305,6 @@ struct obj *read_list() {
   head = nil;
   for (;;) {
     peeked = peek_skipping_whitespace();
-    // obj = read_sexp();
     if (EOF == peeked) fuck("unclosed parenthesis");
     if (')' == peeked) {
       /* skip the paren */
@@ -338,7 +337,9 @@ struct obj *read_quote() {
 }
 
 /* read in a number, whose first digit is val */
-struct obj *read_number(int val) {
+struct obj *read_number(val)
+     int val;
+{
   while (isdigit(peek()))
     val = 10 * val + (getchar() - '0');
   return alloc_int(val);

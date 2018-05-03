@@ -11,25 +11,35 @@
 #include <assert.h>
 
 typedef enum {
-        TNIL,
-        TTRUE,
-        TINT,
-        TCONS,
-        TSTRING,
-        TSYMBOL,
-        TFUNCTION
+  TNIL,
+  TTRUE,
+  TINT,
+  TCONS,
+  TSTRING,
+  TSYMBOL,
+  TPRIMITIVE
 } obj_type_t;
 
+/* function type: (obj **env, obj *args) -> obj *return */
+/* args are expected to have been evaluated */
+typedef struct obj * (*primitive_t)();
+
 struct obj {
-        int type;
-        union {
-                int i;
-                char * str;
-                struct {
-                        struct obj * car;
-                        struct obj * cdr;
-                } c;
-        } value;
+  int type;
+  union {
+    int i;
+    char *str;
+    struct {
+      char *name;
+    } sym;
+    struct {
+      struct obj *car;
+      struct obj *cdr;
+    } c;
+    struct {
+      primitive_t code;
+    } prim;
+  } value;
 };
 
 #define CAR(x) ((x)->value.c.car)
@@ -53,165 +63,277 @@ struct obj * alloc_obj(type)
 struct obj * alloc_int(val)
      int val;
 {
-        struct obj * x = alloc_obj(TINT);
-        x->value.i = val;
-        return x;
+  struct obj * x = alloc_obj(TINT);
+  x->value.i = val;
+  return x;
 }
 
 struct obj * alloc_string(s)
      char * s;
 {
-        struct obj * x = alloc_obj(TSTRING);
-        x->value.str = s;
-        return x;
+  struct obj * x = alloc_obj(TSTRING);
+  x->value.str = s;
+  return x;
 }
 
 struct obj * alloc_cons(ca, cd)
-     struct obj * ca, * cd;
+  struct obj * ca, * cd;
 {
-        struct obj * x = alloc_obj(TCONS);
-        x->value.c.car = ca;
-        x->value.c.cdr = cd;
-        return x;
+  struct obj * x = alloc_obj(TCONS);
+  x->value.c.car = ca;
+  x->value.c.cdr = cd;
+  return x;
+}
+
+struct obj *alloc_primitive(code)
+     primitive_t code;
+{
+  struct obj *x = alloc_obj(TPRIMITIVE);
+  x->value.prim.code = code;
+  return x;
+}
+
+struct obj *symbols;
+
+struct obj *find_symbol(name)
+     char *name;
+{
+  struct obj *entry, *table, *val;
+  for (table = symbols; nil != table; table = CDR(table)) {
+    entry = CAR(table);
+    assert(TSYMBOL == entry->type);
+    if (0 == strcmp(entry->value.sym.name, name)) {
+      return entry;
+    }
+  }
+  return NULL;
+}
+
+struct obj *alloc_symbol(name, intern)
+     char *name;
+     int intern;
+{
+  struct obj *x;
+  if (intern) {
+    x = find_symbol(name);
+    if (!x) {
+      x = alloc_obj(TSYMBOL);
+      x->value.sym.name = name;
+      symbols = alloc_cons(x, symbols);
+    }
+  } else {
+    /* make a fresh symbol */
+    x = alloc_obj(TSYMBOL);
+    x->value.sym.name = name;
+  }
+  return x;
+}
+
+struct obj *intern(name)
+     char *name;
+{
+  return alloc_symbol(name, 1);
 }
 
 void fuck(msg)
      char * msg;
 {
-        printf("fuck: %s\n", msg);
-        exit(1);
+  printf("fuck: %s\n", msg);
+  exit(1);
 }
 
 int proper_list_p(o)
      struct obj * o;
 {
-        if (nil == o) return 1;
-        if (TCONS != o->type) return 0;
-        return proper_list_p(CDR(o));
+  if (nil == o) return 1;
+  if (TCONS != o->type) return 0;
+  return proper_list_p(CDR(o));
 }
 
 int list_length(o)
      struct obj * o;
 {
-        /* assumes that o is a proper list */
-        struct obj * node;
-        int len = 0;
-        for (node = o; node != nil; node = node->value.c.cdr) len++;
-        return len;
+  /* assumes that o is a proper list */
+  struct obj * node;
+  int len = 0;
+  for (node = o; node != nil; node = node->value.c.cdr) len++;
+  return len;
 }
 
-struct obj * prim_add(args)
-     struct obj * args;
+struct obj *lookup_env(env, sym)
+  struct obj *env, *sym;
 {
-        int sum = 0;
-        struct obj * node, * node_val;
+  struct obj *entry;
+  assert(TSYMBOL == sym->type);
+  for (; nil != env; env = CDR(env)) {
+    entry = CAR(env);
+    assert(TCONS == entry->type);
+    if (sym == CAR(entry))
+      return CDR(entry);
+  }
+  return NULL;
+}
 
-        for (node = args; node != nil; node = node->value.c.cdr) {
-                node_val = node->value.c.car;
-                if (TINT != node_val->type) fuck("can only add ints");
+struct obj *push_env(env, sym, val)
+  struct obj *env, *sym, *val;
+{
+  struct obj *entry = alloc_cons(sym, val);
+  return alloc_cons(entry, env);
+}
 
-                sum += node_val->value.i;
-        }
-
-        return alloc_int(sum);
+struct obj *pop_env(env)
+     struct obj *env;
+{
+  /* memory leak */
+  if (nil == env) return nil;
+  return CDR(env);
 }
 
 struct obj * eval();
 
 /* eval each element of a list */
-struct obj * evlis(args)
-     struct obj * args;
+struct obj * evlis(args, env)
+  struct obj *args, **env;
 {
-        struct obj * head = NULL;
-        struct obj * current = NULL;
-        struct obj * node;
+  struct obj * head = NULL;
+  struct obj * current = NULL;
+  struct obj * node;
 
-        for (node = args; node != nil; node = node->value.c.cdr) {
-                if (!current) {
-                        current = alloc_cons(nil, nil);
-                        head = current;
-                } else {
-                        current->value.c.cdr = alloc_cons(nil, nil);
-                        current = current->value.c.cdr;
-                }
-                current->value.c.car = eval(node->value.c.car);
-        }
-        return head;
+  for (node = args; node != nil; node = CDR(node)) {
+    if (!current) {
+      current = alloc_cons(nil, nil);
+      head = current;
+    } else {
+      current->value.c.cdr = alloc_cons(nil, nil);
+      current = current->value.c.cdr;
+    }
+    current->value.c.car = eval(node->value.c.car, env);
+  }
+  return head;
 }
 
-struct obj * eval_progn(body)
-     struct obj * body;
+struct obj * eval_progn(body, env)
+  struct obj *body, **env;
 {
-	struct obj * ret;
+  struct obj *ret;
 
-	for ( ; nil != body; body = body->value.c.cdr) {
-		ret = eval(body->value.c.car);
-	}
+  for ( ; nil != body; body = CDR(body)) {
+    ret = eval(CAR(body), env);
+  }
 
-	return ret;
+  return ret;
 }
 
-struct obj * eval(form)
-     struct obj * form;
+struct obj *primitive_add(env, args)
+     struct obj **env, *args;
 {
-        struct obj * op, * args, * cond;
-        char * op_name;
+  int sum = 0;
+  struct obj *node, *node_val;
 
-        struct obj * a1, * a2;
+  for (node = args; node != nil; node = node->value.c.cdr) {
+    node_val = node->value.c.car;
+    if (TINT != node_val->type) fuck("can only add ints");
 
-        switch (form->type) {
-        /* self evaluating forms */
-        case TNIL:
-        case TTRUE:
-        case TINT:
-        case TSTRING:
-                return form;
+    sum += node_val->value.i;
+  }
 
-        /* a form to evaluate: (f x1 x2 ...) */
-        case TCONS:
-                if (!proper_list_p(form)) fuck("no bueno");
+  return alloc_int(sum);
+}
 
-                op = form->value.c.car;
-                args = form->value.c.cdr;
+struct obj *primitive_eval(env, args)
+     struct obj **env, *args;
+{
+  return eval(FIRST(args), env);
+}
 
-                if (TSTRING != op->type) fuck("bad operator");
+struct obj *primitive_cons(env, args)
+     struct obj **env, *args;
+{
+  return alloc_cons(FIRST(args), SECOND(args));
+}
 
-                op_name = op->value.str;
+void print();
 
-                if (0 == strcmp("QUOTE", op_name)) {
-                        if (1 != list_length(args))
-                                fuck("bad no. of args to QUOTE");
-                        return args->value.c.car;
-                } else if (0 == strcmp("+", op_name)) {
-                        args = evlis(args);
-                        return prim_add(args);
-                } else if (0 == strcmp("EVAL", op_name)) {
-                        args = evlis(args);
-                        return eval(args->value.c.car);
-                } else if (0 == strcmp("CONS", op_name)) {
-                        args = evlis(args);
-                        a1 = args->value.c.car;
-                        a2 = args->value.c.cdr->value.c.car;
-                        return alloc_cons(a1, a2);
-		} else if (0 == strcmp("IF", op_name)) {
-			cond = eval(args->value.c.car);
-			if (nil != cond)
-				return eval(args->value.c.cdr->value.c.car);
-			else
-				return eval(args->value.c.cdr->value.c.cdr->value.c.car);
-		} else if (0 == strcmp("PROGN", op_name)) {
-			return eval_progn(args);
-		} else if (0 == strcmp("PRINC", op_name)) {
-			printf("%s\n", args->value.c.car->value.str);
-			return args->value.c.car;
-                } else {
-                        fuck("bad list to eval");
-                }
-        default:
-                fuck("i don't know how to eval this object");
-        }
-        fuck("shouldn't get here");
-        return NULL;
+struct obj *primitive_princ(env, args)
+     struct obj **env, *args;
+{
+  struct obj *arg = FIRST(args);
+  print(arg);
+  putchar('\n');
+  return arg;
+}
+
+struct obj *primitive_all_symbols(env, args)
+     struct obj **env, *args;
+{
+  return symbols;
+}
+
+struct obj *eval(form, env)
+  struct obj *form, **env;
+{
+  struct obj *op, *args, *cond, *defn;
+  char * op_name;
+
+  switch (form->type) {
+    /* self evaluating forms */
+  case TNIL:
+  case TTRUE:
+  case TINT:
+  case TSTRING:
+  case TPRIMITIVE:
+    return form;
+        
+  case TSYMBOL:
+    return lookup_env(*env, form);
+
+    /* a form to evaluate: (f x1 x2 ...) */
+  case TCONS:
+    if (!proper_list_p(form)) fuck("no bueno thing being eval'd");
+
+    printf("TCONS form: \n");
+    print(form);
+    printf("\n");
+    op = form->value.c.car;
+    args = form->value.c.cdr;
+
+    if (TSYMBOL != op->type && TPRIMITIVE != op->type){
+      fuck("bad operator type");
+    }
+
+    if (TSYMBOL == op->type) {
+      defn = lookup_env(*env, op);
+    } else if (TPRIMITIVE == op->type) {
+      defn = op;
+    }
+    
+    if (NULL != defn) {
+      assert(TPRIMITIVE == defn->type);
+      args = evlis(args, env);
+      return defn->value.prim.code(env, args);
+    } else {
+      op_name = op->value.sym.name;
+      if (0 == strcmp("QUOTE", op_name)) {
+        if (1 != list_length(args))
+          fuck("bad no. of args to QUOTE");
+        return args->value.c.car;
+      } else if (0 == strcmp("IF", op_name)) {
+        cond = eval(args->value.c.car, env);
+        if (nil != cond)
+          return eval(args->value.c.cdr->value.c.car, env);
+        else
+          return eval(args->value.c.cdr->value.c.cdr->value.c.car, env);
+      } else if (0 == strcmp("PROGN", op_name)) {
+        return eval_progn(args, env);
+      }else {
+        fuck("bad list to eval");
+      }
+    }
+  default:
+    fuck("i don't know how to eval this object");
+  }
+  fuck("shouldn't get here");
+  return NULL;
 }
 
 /* parser */
@@ -229,9 +351,9 @@ int whitespace(c)
 }
 
 int peek() {
-    int c = getchar();
-    ungetc(c, stdin);
-    return c;
+  int c = getchar();
+  ungetc(c, stdin);
+  return c;
 }
 
 int peek_skipping_whitespace() {
@@ -260,15 +382,15 @@ int getchar_skipping_whitespace() {
 struct obj *reverse(p)
      struct obj *p;
 {
-    struct obj *ret = nil;
-    struct obj *head;
-    while (nil != p) {
-        head = p;
-        p = CDR(p);
-        CDR(head) = ret;
-        ret = head;
-    }
-    return ret;
+  struct obj *ret = nil;
+  struct obj *head;
+  while (nil != p) {
+    head = p;
+    p = CDR(p);
+    CDR(head) = ret;
+    ret = head;
+  }
+  return ret;
 }
 
 /* skip the rest of a line */
@@ -312,7 +434,7 @@ struct obj *read_list() {
 /* translate 'x into (QUOTE x) */
 struct obj *read_quote() {
   struct obj *sym, *tmp;
-  sym = alloc_string("QUOTE"); /* FIXME */
+  sym = intern("QUOTE");
   tmp = read_sexp();
   tmp = alloc_cons(tmp, nil);
   tmp = alloc_cons(sym, tmp);
@@ -346,7 +468,7 @@ struct obj *read_symbol(c)
   } else if (0 == strcmp(buf, "T")) {
     return tru;
   } else {
-    return alloc_string(strdup(buf)); /* FIXME */
+    return intern(strdup(buf));
   }
 }
 
@@ -404,6 +526,10 @@ void print(o)
   case TSTRING:
     printf("%s", o->value.str);
     return;
+    
+  case TSYMBOL:
+    printf("%s", o->value.sym.name);
+    return;
 
   case TINT:
     printf("%d", o->value.i);
@@ -417,37 +543,60 @@ void print(o)
     printf("NIL");
     return;
 
+  case TPRIMITIVE:
+    printf("<primitive>");
+    return;
+    
   default:
     fuck("print: unknown type");
   }
 }
 
-void init_lisp () {
-        nil = alloc_obj(TNIL);
-        tru = alloc_obj(TTRUE);
+void init_lisp (env)
+     struct obj **env;
+{
+  nil = alloc_obj(TNIL);
+  tru = alloc_obj(TTRUE);
+  symbols = nil;
+  *env = nil;
+  *env = push_env(*env,
+                  intern("+"),
+                  alloc_primitive(primitive_add));
+  *env = push_env(*env,
+                  intern("CONS"),
+                  alloc_primitive(primitive_cons));
+  *env = push_env(*env,
+                  intern("EVAL"),
+                  alloc_primitive(primitive_eval));
+  *env = push_env(*env,
+                  intern("PRINC"),
+                  alloc_primitive(primitive_princ));
+  *env = push_env(*env,
+                  intern("ALL-SYMBOLS"),
+                  alloc_primitive(primitive_all_symbols));  
 }
 
-void eval_form(f)
-     struct obj * f;
+void eval_form(f, env)
+  struct obj *f, **env;
 {
   printf("\n INPUT: ");
   print(f);
   putchar('\n');
-  f = eval(f);
+  f = eval(f, env);
   printf("OUTPUT: ");
   print(f);
   printf("\n");
 }
 
 void main () {
-  struct obj * form;
-
-  init_lisp();
+  struct obj *form, *root_env;
+  init_lisp(&root_env);
+  
   fprintf(stderr, "welcome to bnlisp\n");
 
   for (;;) {
     form = read_sexp();
     if (!form) break;
-    eval_form(form);
+    eval_form(form, &root_env);
   }
 }

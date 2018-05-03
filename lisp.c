@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-enum {
+typedef enum {
         TNIL,
         TTRUE,
         TINT,
@@ -18,7 +18,7 @@ enum {
         TSTRING,
         TSYMBOL,
         TFUNCTION
-};
+} obj_type_t;
 
 struct obj {
         int type;
@@ -38,69 +38,52 @@ struct obj {
 #define SECOND(x) CAR(CDR(x))
 #define THIRD(x) CAR(CDR(CDR(x)))
 
+/* initialized by init_lisp */
 struct obj *nil = NULL;
 struct obj *tru = NULL;
 
-struct obj * alloc_obj() {
-        return (struct obj *)calloc(1, sizeof (struct obj));
+struct obj * alloc_obj(type)
+     obj_type_t type;
+{
+  struct obj *o = (struct obj *)calloc(1, sizeof (struct obj));
+  o->type = type;
+  return o;
 }
 
 struct obj * alloc_int(val)
-int val;
+     int val;
 {
-        struct obj * x = alloc_obj();
-        x->type = TINT;
+        struct obj * x = alloc_obj(TINT);
         x->value.i = val;
         return x;
 }
 
-/*
-char *strdup(src)
-     char *src;
-{
-  char *str;
-  char *p;
-  int len = 0;
-
-  while (src[len])
-    len++;
-  str = malloc(len + 1);
-  p = str;
-  while (*src)
-    *p++ = *src++;
-  *p = '\0';
-  return str;
-}
-*/
-
 struct obj * alloc_string(s)
-char * s;
+     char * s;
 {
-        struct obj * x = alloc_obj();
-        x->type = TSTRING;
+        struct obj * x = alloc_obj(TSTRING);
         x->value.str = s;
         return x;
 }
 
 struct obj * alloc_cons(ca, cd)
-struct obj * ca, * cd;
+     struct obj * ca, * cd;
 {
-        struct obj * x = alloc_obj();
-        x->type = TCONS;
+        struct obj * x = alloc_obj(TCONS);
         x->value.c.car = ca;
         x->value.c.cdr = cd;
         return x;
 }
 
 void fuck(msg)
-char * msg;
+     char * msg;
 {
         printf("fuck: %s\n", msg);
         exit(1);
 }
 
 int proper_list_p(o)
-struct obj * o;
+     struct obj * o;
 {
         if (nil == o) return 1;
         if (TCONS != o->type) return 0;
@@ -108,7 +91,7 @@ struct obj * o;
 }
 
 int list_length(o)
-struct obj * o;
+     struct obj * o;
 {
         /* assumes that o is a proper list */
         struct obj * node;
@@ -118,7 +101,7 @@ struct obj * o;
 }
 
 struct obj * prim_add(args)
-struct obj * args;
+     struct obj * args;
 {
         int sum = 0;
         struct obj * node, * node_val;
@@ -137,7 +120,7 @@ struct obj * eval();
 
 /* eval each element of a list */
 struct obj * evlis(args)
-struct obj * args;
+     struct obj * args;
 {
         struct obj * head = NULL;
         struct obj * current = NULL;
@@ -157,7 +140,7 @@ struct obj * args;
 }
 
 struct obj * eval_progn(body)
-struct obj * body;
+     struct obj * body;
 {
 	struct obj * ret;
 
@@ -440,10 +423,8 @@ void print(o)
 }
 
 void init_lisp () {
-        nil = alloc_obj();
-        nil->type = TNIL;
-        tru = alloc_obj();
-        tru->type = TTRUE;
+        nil = alloc_obj(TNIL);
+        tru = alloc_obj(TTRUE);
 }
 
 void eval_form(f)
@@ -459,15 +440,14 @@ void eval_form(f)
 }
 
 void main () {
-        struct obj * form, * tmp1, * tmp2;
-        struct obj * ev_form;
+  struct obj * form;
 
-        init_lisp();
-        fprintf(stderr, "welcome to bnlisp\n");
+  init_lisp();
+  fprintf(stderr, "welcome to bnlisp\n");
 
-        for (;;) {
-          form = read_sexp();
-          if (!form) break;
-          eval_form(form);
-        }
+  for (;;) {
+    form = read_sexp();
+    if (!form) break;
+    eval_form(form);
+  }
 }

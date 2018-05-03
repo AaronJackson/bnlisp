@@ -128,7 +128,7 @@ struct obj * args;
 struct obj * eval(form)
 struct obj * form;
 {
-        struct obj * op, * args;
+        struct obj * op, * args, * cond;
         char * op_name;
 
         struct obj * a1, * a2;
@@ -166,6 +166,16 @@ struct obj * form;
                         a1 = args->value.c.car;
                         a2 = args->value.c.cdr->value.c.car;
                         return alloc_cons(a1, a2);
+		} else if (0 == strcmp("IF", op_name)) {
+			cond = eval(args->value.c.car);
+			if (nil != cond)
+				return eval(args->value.c.cdr->value.c.car);
+			else
+				return eval(args->value.c.cdr->value.c.cdr->value.c.car);
+
+		} else if (0 == strcmp("PRINC", op_name)) {
+			printf("%s\n", args->value.c.car->value.str);
+			return args->value.c.car;
                 } else {
                         fuck("bad list to eval");
                 }
@@ -238,7 +248,7 @@ struct obj * f;
 }
 
 void main () {
-        struct obj * form;
+        struct obj * form, * tmp1, * tmp2;
         struct obj * ev_form;
 
         init_lisp();
@@ -285,4 +295,20 @@ void main () {
 		alloc_cons(form, nil));
 	eval_form(form);
 
+	tmp1 = alloc_cons(alloc_string("PRINC"),
+		alloc_cons(alloc_string("something"), nil));
+	tmp2 = alloc_cons(alloc_string("PRINC"),
+		alloc_cons(alloc_string("something else"), nil));
+
+	form = alloc_cons(alloc_string("IF"),
+		alloc_cons(alloc_int(1),
+		alloc_cons(tmp1,
+		alloc_cons(tmp2, nil))));
+	eval_form(form);
+
+	form = alloc_cons(alloc_string("IF"),
+		alloc_cons(nil,
+		alloc_cons(tmp1,
+		alloc_cons(tmp2, nil))));
+	eval_form(form);
 }

@@ -253,6 +253,33 @@ struct obj *primitive_cons(env, args)
   return alloc_cons(FIRST(args), SECOND(args));
 }
 
+struct obj *primitive_car(env, args)
+     struct obj **env, *args;
+{
+  return CAR(FIRST(args));
+}
+
+struct obj *primitive_cdr(env, args)
+     struct obj **env, *args;
+{
+  return CDR(FIRST(args));
+}
+
+struct obj *primitive_rplaca(env, args)
+     struct obj **env, *args;
+{
+  CAR(FIRST(args)) = SECOND(args);
+  return FIRST(args);
+}
+
+struct obj *primitive_rplacd(env, args)
+     struct obj **env, *args;
+{
+  CDR(FIRST(args)) = SECOND(args);
+  return FIRST(args);
+}
+
+
 void print();
 
 struct obj *primitive_print(env, args)
@@ -616,6 +643,18 @@ void init_lisp (env)
   *env = push_env(*env,
                   intern("CONS"),
                   alloc_primitive(primitive_cons));
+  *env = push_env(*env,
+                  intern("CAR"),
+                  alloc_primitive(primitive_car));
+  *env = push_env(*env,
+                  intern("CDR"),
+                  alloc_primitive(primitive_cdr));
+  *env = push_env(*env,
+                  intern("RPLACA"),
+                  alloc_primitive(primitive_rplaca));
+  *env = push_env(*env,
+                  intern("RPLACD"),
+                  alloc_primitive(primitive_rplacd));
   *env = push_env(*env,
                   intern("EVAL"),
                   alloc_primitive(primitive_eval));

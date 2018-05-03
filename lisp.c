@@ -125,6 +125,18 @@ struct obj * args;
         return head;
 }
 
+struct obj * eval_progn(body)
+struct obj * body;
+{
+	struct obj * ret;
+
+	for ( ; nil != body; body = body->value.c.cdr) {
+		ret = eval(body->value.c.car);
+	}
+
+	return ret;
+}
+
 struct obj * eval(form)
 struct obj * form;
 {
@@ -172,7 +184,8 @@ struct obj * form;
 				return eval(args->value.c.cdr->value.c.car);
 			else
 				return eval(args->value.c.cdr->value.c.cdr->value.c.car);
-
+		} else if (0 == strcmp("PROGN", op_name)) {
+			return eval_progn(args);
 		} else if (0 == strcmp("PRINC", op_name)) {
 			printf("%s\n", args->value.c.car->value.str);
 			return args->value.c.car;
@@ -310,5 +323,11 @@ void main () {
 		alloc_cons(nil,
 		alloc_cons(tmp1,
 		alloc_cons(tmp2, nil))));
+	eval_form(form);
+
+	/* (PROGN (PRINC "something") (PRINC "something else")) */
+	form = alloc_cons(alloc_string("PROGN"),
+		alloc_cons(tmp1, alloc_cons(tmp2, nil)));
+
 	eval_form(form);
 }

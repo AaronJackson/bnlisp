@@ -448,10 +448,12 @@ void init_lisp () {
 void eval_form(f)
      struct obj * f;
 {
-  printf(" INPUT: ");
+  printf("\n INPUT: ");
   print(f);
-  printf("\nOUTPUT: ");
-  print(eval(f));
+  putchar('\n');
+  f = eval(f);
+  printf("OUTPUT: ");
+  print(f);
   printf("\n");
 }
 

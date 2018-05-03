@@ -158,7 +158,7 @@ struct obj * form;
                 } else if (0 == strcmp("+", op_name)) {
                         args = evlis(args);
                         return prim_add(args);
-                } else if {0 == strcmp("EVAL", op_name)) {
+                } else if (0 == strcmp("EVAL", op_name)) {
                         args = evlis(args);
                         return eval(args->value.c.car);
                 } else if (0 == strcmp("CONS", op_name)) {
@@ -227,20 +227,62 @@ void init_lisp () {
         nil->type = TNIL;
 }
 
+void eval_form(f)
+struct obj * f;
+{
+	printf(" INPUT: ");
+	print_obj(f);
+	printf("\nOUTPUT: ");
+	print_obj(eval(f));
+	printf("\n");
+}
+
 void main () {
         struct obj * form;
         struct obj * ev_form;
 
         init_lisp();
 
+	/* (+ 1 2) */
         form = alloc_cons(alloc_string("+"),
-                                alloc_cons(alloc_int(1),
-                                alloc_cons(alloc_int(2), nil)));
+		alloc_cons(alloc_int(1),
+		alloc_cons(alloc_int(2), nil)));
 
-        printf("input: ");
-        print_obj(form);
-        printf("\n\noutput: ");
-        ev_form = eval(form);
-        print_obj(ev_form);
+	eval_form(form);
+
+	/* (QUOTE (+ 1 2)) */
+	form = alloc_cons(alloc_string("QUOTE"),
+		alloc_cons(form, nil));
+	eval_form(form);
+
+	/* (CONS 2 1) */
+	form = alloc_cons(alloc_string("CONS"),
+		alloc_cons(alloc_int(2),
+			alloc_cons(alloc_int(3), nil)));
+	eval_form(form);
+
+	/* (EVAL (CONS + (CONS 1 (CONS 2 NIL)))) */
+	form = alloc_cons(alloc_string("CONS"),
+		alloc_cons(alloc_int(2),
+		alloc_cons(nil, nil)));
+	form = alloc_cons(alloc_string("CONS"),
+		alloc_cons(alloc_int(1),
+		alloc_cons(form, nil)));
+	form = alloc_cons(alloc_string("CONS"),
+		alloc_cons(alloc_string("+"),
+		alloc_cons(form, nil)));
+	form = alloc_cons(alloc_string("EVAL"),
+		alloc_cons(form, nil));
+	eval_form(form);
+
+	/* (EVAL (QUOTE (+ 1 2)) */
+	form = alloc_cons(alloc_string("+"),
+		alloc_cons(alloc_int(1),
+		alloc_cons(alloc_int(2), nil)));
+	form = alloc_cons(alloc_string("QUOTE"),
+		alloc_cons(form, nil));
+	form = alloc_cons(alloc_string("EVAL"),
+		alloc_cons(form, nil));
+	eval_form(form);
 
 }

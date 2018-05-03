@@ -357,7 +357,13 @@ struct obj *read_symbol(c)
     buf[len++] = getchar();
   }
   buf[len] = '\0';
-  return alloc_string(strdup(buf)); /* FIXME */
+  if (0 == strcmp(buf, "NIL")) {
+    return nil;
+  } else if (0 == strcmp(buf, "T")) {
+    return tru;
+  } else {
+    return alloc_string(strdup(buf)); /* FIXME */
+  }
 }
 
 struct obj *read_sexp() {
@@ -420,11 +426,11 @@ void print(o)
     return;
 
   case TTRUE:
-    printf("t");
+    printf("T");
     return;
 
   case TNIL:
-    printf("nil");
+    printf("NIL");
     return;
 
   default:
@@ -454,11 +460,15 @@ void main () {
         struct obj * ev_form;
 
         init_lisp();
+        fprintf(stderr, "welcome to bnlisp\n");
 
-        printf("> ");
-        form = read_sexp();
-        eval_form(form);
+        for (;;) {
+          form = read_sexp();
+          if (!form) break;
+          eval_form(form);
+        }
 
+        return;
 
 	/* (+ 1 2) */
         form = alloc_cons(alloc_string("+"),
@@ -505,21 +515,23 @@ void main () {
 	tmp1 = alloc_cons(alloc_string("PRINC"),
 		alloc_cons(alloc_string("something"), nil));
 	tmp2 = alloc_cons(alloc_string("PRINC"),
-		alloc_cons(alloc_string("something else"), nil));
+		alloc_cons(alloc_string("something-else"), nil));
 
+        /* (IF 1 (PRINC something) (PRINC something-else)) */
 	form = alloc_cons(alloc_string("IF"),
 		alloc_cons(alloc_int(1),
 		alloc_cons(tmp1,
 		alloc_cons(tmp2, nil))));
 	eval_form(form);
 
+        /* (IF nil (PRINC something) (PRINC something-else)) */
 	form = alloc_cons(alloc_string("IF"),
 		alloc_cons(nil,
 		alloc_cons(tmp1,
 		alloc_cons(tmp2, nil))));
 	eval_form(form);
 
-	/* (PROGN (PRINC "something") (PRINC "something else")) */
+	/* (PROGN (PRINC something) (PRINC something-else)) */
 	form = alloc_cons(alloc_string("PROGN"),
 		alloc_cons(tmp1, alloc_cons(tmp2, nil)));
 

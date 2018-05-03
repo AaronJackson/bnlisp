@@ -254,7 +254,7 @@ struct obj *primitive_cons(env, args)
 
 void print();
 
-struct obj *primitive_princ(env, args)
+struct obj *primitive_print(env, args)
      struct obj **env, *args;
 {
   struct obj *arg = FIRST(args);
@@ -272,7 +272,7 @@ struct obj *primitive_all_symbols(env, args)
 struct obj *eval(form, env)
   struct obj *form, **env;
 {
-  struct obj *op, *args, *cond, *defn;
+  struct obj *op, *args, *cond, *defn, *var, *val;
   char * op_name;
 
   switch (form->type) {
@@ -291,9 +291,6 @@ struct obj *eval(form, env)
   case TCONS:
     if (!proper_list_p(form)) fuck("no bueno thing being eval'd");
 
-    printf("TCONS form: \n");
-    print(form);
-    printf("\n");
     op = form->value.c.car;
     args = form->value.c.cdr;
 
@@ -317,6 +314,11 @@ struct obj *eval(form, env)
         if (1 != list_length(args))
           fuck("bad no. of args to QUOTE");
         return args->value.c.car;
+      } else if (0 == strcmp("SETQ", op_name)) {
+        var = FIRST(args);
+        val = eval(SECOND(args), env);
+        *env = push_env(*env, var, val);
+        return val;
       } else if (0 == strcmp("IF", op_name)) {
         cond = eval(args->value.c.car, env);
         if (nil != cond)
@@ -569,8 +571,8 @@ void init_lisp (env)
                   intern("EVAL"),
                   alloc_primitive(primitive_eval));
   *env = push_env(*env,
-                  intern("PRINC"),
-                  alloc_primitive(primitive_princ));
+                  intern("PRINT"),
+                  alloc_primitive(primitive_print));
   *env = push_env(*env,
                   intern("ALL-SYMBOLS"),
                   alloc_primitive(primitive_all_symbols));  

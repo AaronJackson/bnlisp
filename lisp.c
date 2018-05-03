@@ -47,6 +47,7 @@ struct obj {
 #define FIRST(x) CAR(x)
 #define SECOND(x) CAR(CDR(x))
 #define THIRD(x) CAR(CDR(CDR(x)))
+#define REST(x) CDR(x)
 
 /* initialized by init_lisp */
 struct obj *nil = NULL;
@@ -269,10 +270,48 @@ struct obj *primitive_all_symbols(env, args)
   return symbols;
 }
 
+struct obj *primitive_eq(env, args)
+     struct obj **env, *args;
+{
+  struct obj *a, *b;
+  a = FIRST(args);
+  b = SECOND(args);
+
+  /* type mismatch */
+  if (a->type != b->type) return nil;
+
+  /* constants */
+  if (nil == a || tru == a) return tru;
+
+  /* numbers */
+  if (TINT == a->type) return (a->value.i == b->value.i) ? tru : nil;
+
+  /* everything else */
+  return (a == b) ? tru : nil;
+}
+
+struct obj *primitive_number_equals(env, args)
+     struct obj **env, *args;
+{
+  struct obj *a, *b;
+  a = FIRST(args);
+  b = SECOND(args);
+  if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
+
+  return (a->value.i == b->value.i) ? tru : nil;
+}
+
+struct obj *primitive_not(env, args)
+     struct obj **env, *args;
+{
+  return (nil == FIRST(args)) ? tru : nil;
+}
+
+
 struct obj *eval(form, env)
   struct obj *form, **env;
 {
-  struct obj *op, *args, *cond, *defn, *var, *val;
+  struct obj *op, *arg, *args, *cond, *defn, *var, *val;
   char * op_name;
 
   switch (form->type) {
@@ -283,7 +322,7 @@ struct obj *eval(form, env)
   case TSTRING:
   case TPRIMITIVE:
     return form;
-        
+
   case TSYMBOL:
     return lookup_env(*env, form);
 
@@ -303,7 +342,7 @@ struct obj *eval(form, env)
     } else if (TPRIMITIVE == op->type) {
       defn = op;
     }
-    
+
     if (NULL != defn) {
       assert(TPRIMITIVE == defn->type);
       args = evlis(args, env);
@@ -327,7 +366,17 @@ struct obj *eval(form, env)
           return eval(args->value.c.cdr->value.c.cdr->value.c.car, env);
       } else if (0 == strcmp("PROGN", op_name)) {
         return eval_progn(args, env);
-      }else {
+      } else if (0 == strcmp("WHILE", op_name)) {
+        cond = FIRST(args);
+        args = REST(args);
+
+        while (nil != eval(cond, env)) {
+          for (arg = args; nil != arg; arg = CDR(arg)) {
+            eval(CAR(arg), env);
+          }
+        }
+        return nil;
+      } else {
         fuck("bad list to eval");
       }
     }
@@ -528,7 +577,7 @@ void print(o)
   case TSTRING:
     printf("%s", o->value.str);
     return;
-    
+
   case TSYMBOL:
     printf("%s", o->value.sym.name);
     return;
@@ -548,7 +597,7 @@ void print(o)
   case TPRIMITIVE:
     printf("<primitive>");
     return;
-    
+
   default:
     fuck("print: unknown type");
   }
@@ -575,7 +624,17 @@ void init_lisp (env)
                   alloc_primitive(primitive_print));
   *env = push_env(*env,
                   intern("ALL-SYMBOLS"),
-                  alloc_primitive(primitive_all_symbols));  
+                  alloc_primitive(primitive_all_symbols));
+  *env = push_env(*env,
+                  intern("EQ"),
+                  alloc_primitive(primitive_eq));
+  *env = push_env(*env,
+                  intern("="),
+                  alloc_primitive(primitive_number_equals));
+  *env = push_env(*env,
+                  intern("NOT"),
+                  alloc_primitive(primitive_not));
+
 }
 
 void eval_form(f, env)
@@ -593,7 +652,7 @@ void eval_form(f, env)
 void main () {
   struct obj *form, *root_env;
   init_lisp(&root_env);
-  
+
   fprintf(stderr, "welcome to bnlisp\n");
 
   for (;;) {

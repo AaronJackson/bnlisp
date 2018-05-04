@@ -1,0 +1,16 @@
+;;; library functions
+
+(SETQ ZEROP (LAMBDA (X) (= 0 X)))
+
+(SETQ NULL (LAMBDA (X) (EQ NIL X)))
+
+(SETQ MAP (LAMBDA (F L)
+            (IF (NULL L)
+                NIL
+                (CONS (F (CAR L))
+                      (MAP F (CDR L))))))
+
+(SETQ DOUBLE (LAMBDA (X) (+ X X)))
+
+(SETQ COMPOSE (LAMBDA (F G) (LAMBDA (X) (F (G X)))))
+

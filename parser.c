@@ -115,6 +115,7 @@ obj_t *read_string() {
     if ('\\' == c && !escaped) { /* ESCAPE CHARACTER */
       escaped = 1;
       i--;
+      continue;
     } else if ('"' == c && !escaped) { /* END OF STRING */
       s[i] = '\0';
       break;

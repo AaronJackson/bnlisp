@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #include "util.h"
 #include "obj.h"
@@ -138,7 +139,6 @@ obj_t *primitive_rplacd(env, args)
   return FIRST(eargs);
 }
 
-
 obj_t *primitive_print(env, args)
      obj_t **env, *args;
 {
@@ -185,6 +185,16 @@ obj_t *primitive_number_equals(env, args)
   if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
 
   return (a->value.i == b->value.i) ? tru : nil;
+}
+
+obj_t *primitive_string_equals(env, args)
+  obj_t **env, *args;
+{
+  char *a, *b;
+  a = FIRST(args)->value.str;
+  b = SECOND(args)->value.str;
+
+  return (0 == strcmp(a, b)) ? tru : nil;
 }
 
 obj_t *primitive_not(env, args)

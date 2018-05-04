@@ -15,5 +15,6 @@ obj_t *primitive_print();
 obj_t *primitive_all_symbols();
 obj_t *primitive_eq();
 obj_t *primitive_number_equals();
+obj_t *primitive_string_equals();
 obj_t *primitive_not();
 obj_t *primitive_readchar();

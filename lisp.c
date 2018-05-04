@@ -17,6 +17,7 @@
 #include "parser.h"
 #include "symbol.h"
 #include "env.h"
+#include "prim.h"
 #include "lisp.h"
 
 /* eval each element of a list */
@@ -242,16 +243,30 @@ void eval_form(f, env)
   printf("\n");
 }
 
-int main () {
+int main (argc, argv)
+     int argc;
+     char *argv[];
+{
   obj_t *form;
+  int silent = 0;
+
+  silent = (argc > 1 && 0 == strcmp(argv[1], "-s"));
+
   init_lisp();
 
   fprintf(stderr, "welcome to bnlisp\n");
 
+
+
   for (;;) {
     form = read_sexp();
     if (!form) break;
-    eval_form(form, &VM->global_bindings);
+    if (silent) {
+      eval(form, &VM->global_bindings);
+    } else {
+      eval_form(form, &VM->global_bindings);
+    }
   }
-  exit(1);
+
+exit(1);
 }

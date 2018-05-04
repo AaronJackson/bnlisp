@@ -9,6 +9,8 @@
 #include "alloc.h"
 #include "machine.h"
 #include "lisp.h"
+#include "symbol.h"
+#include "env.h"
 #include "parser.h"
 
 char *symbol_chars = "~!@#$%^&*-_=+:/?<>";

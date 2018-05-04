@@ -7,6 +7,7 @@
 #include "machine.h"
 #include "alloc.h"
 #include "lisp.h"
+#include "env.h"
 #include "prim.h"
 
 obj_t *primitive_progn(env, body)

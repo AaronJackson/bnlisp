@@ -191,8 +191,10 @@ obj_t *primitive_string_equals(env, args)
   obj_t **env, *args;
 {
   obj_t *a, *b;
-  a = FIRST(args);
-  b = SECOND(args);
+  obj_t *eargs = evlis(args, env);
+
+  a = FIRST(eargs);
+  b = SECOND(eargs);
 
   if (TSTRING != a->type || TSTRING != b->type)
     fuck("can't do STRING= on non-strings");

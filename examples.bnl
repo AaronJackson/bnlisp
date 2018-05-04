@@ -30,3 +30,8 @@
 (SETQ NULL (LAMBDA (X) (EQ X NIL)))
 (NULL 5)
 (NULL NIL)
+(SETQ A-STRING "Hello, yes, this is a string.")
+(PRINT A-STRING)
+(STRING= (PRINT "Hello there") "Hello there")
+(STRING= (CAR '("A")) "A")
+(STRING= (CAR '("A")) "B")

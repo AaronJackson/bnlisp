@@ -13,4 +13,3 @@
 (SETQ DOUBLE (LAMBDA (X) (+ X X)))
 
 (SETQ COMPOSE (LAMBDA (F G) (LAMBDA (X) (F (G X)))))
-

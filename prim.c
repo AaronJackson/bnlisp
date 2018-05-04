@@ -195,3 +195,13 @@ obj_t *primitive_not(env, args)
   obj_t *eargs = evlis(args, env);
   return (nil == FIRST(eargs)) ? tru : nil;
 }
+
+obj_t *primitive_readchar(env, args)
+  obj_t **env, *args;
+{
+  char c = getchar();
+  char s[2];
+  s[0] = c;
+  s[1] = '\0';
+  return alloc_string(s);
+}

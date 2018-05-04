@@ -1,6 +1,30 @@
 * bnlisp, a lisp for 2.11BSD
 
-A work in progress.
+bnl (Marc Cleave) was a fan of, among other things, Lisp, PDP-11s and
+UNIX. In bnlisp, we try to encapsulate some of these interests by
+encapsulating them into a lisp interpreter which runs on the PDP-11
+under 2.11BSD.
+
+It is currently full of memory leaks, so, enjoy.
+
+A small example:
+
+#+BEGIN_SRC
+$ ./lisp
+welcome to bnlisp
+(SETQ PDP 11)
+(PRINT (CONS (QUOTE THE)
+	     (CONS (QUOTE PDP)
+		   (CONS PDP  (CONS (QUOTE IS)
+				    (CONS (QUOTE COOL) NIL))))))
+ INPUT: (SETQ PDP 11)
+OUTPUT: 11
 
 
+ INPUT: (PRINT (CONS (QUOTE THE) (CONS (QUOTE PDP) (CONS PDP (CONS (QUOTE IS) (CONS (QUOTE COOL) NIL))))))
+(THE PDP 11 IS COOL)
+OUTPUT: (THE PDP 11 IS COOL)
 
+#+END_SRC
+
+We all miss you bnl :heart:

@@ -10,6 +10,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+/***** OBJECT REPRESENTATION *****/
+
 typedef enum {
   TNIL,
   TTRUE,
@@ -24,7 +26,7 @@ typedef enum {
 /* args are expected to have been evaluated */
 typedef struct obj * (*primitive_t)();
 
-struct obj {
+typedef struct obj {
   int type;
   union {
     int i;
@@ -40,7 +42,7 @@ struct obj {
       primitive_t code;
     } prim;
   } value;
-};
+} obj_t;
 
 #define CAR(x) ((x)->value.c.car)
 #define CDR(x) ((x)->value.c.cdr)
@@ -50,56 +52,56 @@ struct obj {
 #define REST(x) CDR(x)
 
 /* initialized by init_lisp */
-struct obj *nil = NULL;
-struct obj *tru = NULL;
+obj_t *nil = NULL;
+obj_t *tru = NULL;
 
-struct obj * alloc_obj(type)
+obj_t * alloc_obj(type)
      obj_type_t type;
 {
-  struct obj *o = (struct obj *)calloc(1, sizeof (struct obj));
+  obj_t *o = (obj_t *)calloc(1, sizeof (obj_t));
   o->type = type;
   return o;
 }
 
-struct obj * alloc_int(val)
+obj_t * alloc_int(val)
      int val;
 {
-  struct obj * x = alloc_obj(TINT);
+  obj_t * x = alloc_obj(TINT);
   x->value.i = val;
   return x;
 }
 
-struct obj * alloc_string(s)
+obj_t * alloc_string(s)
      char * s;
 {
-  struct obj * x = alloc_obj(TSTRING);
+  obj_t * x = alloc_obj(TSTRING);
   x->value.str = s;
   return x;
 }
 
-struct obj * alloc_cons(ca, cd)
-  struct obj * ca, * cd;
+obj_t * alloc_cons(ca, cd)
+  obj_t * ca, * cd;
 {
-  struct obj * x = alloc_obj(TCONS);
+  obj_t * x = alloc_obj(TCONS);
   x->value.c.car = ca;
   x->value.c.cdr = cd;
   return x;
 }
 
-struct obj *alloc_primitive(code)
+obj_t *alloc_primitive(code)
      primitive_t code;
 {
-  struct obj *x = alloc_obj(TPRIMITIVE);
+  obj_t *x = alloc_obj(TPRIMITIVE);
   x->value.prim.code = code;
   return x;
 }
 
-struct obj *symbols;
+obj_t *symbols;
 
-struct obj *find_symbol(name)
+obj_t *find_symbol(name)
      char *name;
 {
-  struct obj *entry, *table, *val;
+  obj_t *entry, *table, *val;
   for (table = symbols; nil != table; table = CDR(table)) {
     entry = CAR(table);
     assert(TSYMBOL == entry->type);
@@ -110,11 +112,11 @@ struct obj *find_symbol(name)
   return NULL;
 }
 
-struct obj *alloc_symbol(name, intern)
+obj_t *alloc_symbol(name, intern)
      char *name;
      int intern;
 {
-  struct obj *x;
+  obj_t *x;
   if (intern) {
     x = find_symbol(name);
     if (!x) {
@@ -130,7 +132,7 @@ struct obj *alloc_symbol(name, intern)
   return x;
 }
 
-struct obj *intern(name)
+obj_t *intern(name)
      char *name;
 {
   return alloc_symbol(name, 1);
@@ -144,7 +146,7 @@ void fuck(msg)
 }
 
 int proper_list_p(o)
-     struct obj * o;
+     obj_t * o;
 {
   if (nil == o) return 1;
   if (TCONS != o->type) return 0;
@@ -152,19 +154,19 @@ int proper_list_p(o)
 }
 
 int list_length(o)
-     struct obj * o;
+     obj_t * o;
 {
   /* assumes that o is a proper list */
-  struct obj * node;
+  obj_t * node;
   int len = 0;
   for (node = o; node != nil; node = node->value.c.cdr) len++;
   return len;
 }
 
-struct obj *lookup_env(env, sym)
-  struct obj *env, *sym;
+obj_t *lookup_env(env, sym)
+  obj_t *env, *sym;
 {
-  struct obj *entry;
+  obj_t *entry;
   assert(TSYMBOL == sym->type);
   for (; nil != env; env = CDR(env)) {
     entry = CAR(env);
@@ -175,30 +177,30 @@ struct obj *lookup_env(env, sym)
   return NULL;
 }
 
-struct obj *push_env(env, sym, val)
-  struct obj *env, *sym, *val;
+obj_t *push_env(env, sym, val)
+  obj_t *env, *sym, *val;
 {
-  struct obj *entry = alloc_cons(sym, val);
+  obj_t *entry = alloc_cons(sym, val);
   return alloc_cons(entry, env);
 }
 
-struct obj *pop_env(env)
-     struct obj *env;
+obj_t *pop_env(env)
+     obj_t *env;
 {
   /* memory leak */
   if (nil == env) return nil;
   return CDR(env);
 }
 
-struct obj * eval();
+obj_t * eval();
 
 /* eval each element of a list */
-struct obj * evlis(args, env)
-  struct obj *args, **env;
+obj_t * evlis(args, env)
+  obj_t *args, **env;
 {
-  struct obj * head = NULL;
-  struct obj * current = NULL;
-  struct obj * node;
+  obj_t * head = NULL;
+  obj_t * current = NULL;
+  obj_t * node;
 
   for (node = args; node != nil; node = CDR(node)) {
     if (!current) {
@@ -213,10 +215,10 @@ struct obj * evlis(args, env)
   return head;
 }
 
-struct obj * eval_progn(body, env)
-  struct obj *body, **env;
+obj_t * eval_progn(body, env)
+  obj_t *body, **env;
 {
-  struct obj *ret;
+  obj_t *ret;
 
   for ( ; nil != body; body = CDR(body)) {
     ret = eval(CAR(body), env);
@@ -225,11 +227,11 @@ struct obj * eval_progn(body, env)
   return ret;
 }
 
-struct obj *primitive_add(env, args)
-     struct obj **env, *args;
+obj_t *primitive_add(env, args)
+     obj_t **env, *args;
 {
   int sum = 0;
-  struct obj *node, *node_val;
+  obj_t *node, *node_val;
 
   for (node = args; node != nil; node = node->value.c.cdr) {
     node_val = node->value.c.car;
@@ -241,39 +243,39 @@ struct obj *primitive_add(env, args)
   return alloc_int(sum);
 }
 
-struct obj *primitive_eval(env, args)
-     struct obj **env, *args;
+obj_t *primitive_eval(env, args)
+     obj_t **env, *args;
 {
   return eval(FIRST(args), env);
 }
 
-struct obj *primitive_cons(env, args)
-     struct obj **env, *args;
+obj_t *primitive_cons(env, args)
+     obj_t **env, *args;
 {
   return alloc_cons(FIRST(args), SECOND(args));
 }
 
-struct obj *primitive_car(env, args)
-     struct obj **env, *args;
+obj_t *primitive_car(env, args)
+     obj_t **env, *args;
 {
   return CAR(FIRST(args));
 }
 
-struct obj *primitive_cdr(env, args)
-     struct obj **env, *args;
+obj_t *primitive_cdr(env, args)
+     obj_t **env, *args;
 {
   return CDR(FIRST(args));
 }
 
-struct obj *primitive_rplaca(env, args)
-     struct obj **env, *args;
+obj_t *primitive_rplaca(env, args)
+     obj_t **env, *args;
 {
   CAR(FIRST(args)) = SECOND(args);
   return FIRST(args);
 }
 
-struct obj *primitive_rplacd(env, args)
-     struct obj **env, *args;
+obj_t *primitive_rplacd(env, args)
+     obj_t **env, *args;
 {
   CDR(FIRST(args)) = SECOND(args);
   return FIRST(args);
@@ -282,25 +284,25 @@ struct obj *primitive_rplacd(env, args)
 
 void print();
 
-struct obj *primitive_print(env, args)
-     struct obj **env, *args;
+obj_t *primitive_print(env, args)
+     obj_t **env, *args;
 {
-  struct obj *arg = FIRST(args);
+  obj_t *arg = FIRST(args);
   print(arg);
   putchar('\n');
   return arg;
 }
 
-struct obj *primitive_all_symbols(env, args)
-     struct obj **env, *args;
+obj_t *primitive_all_symbols(env, args)
+     obj_t **env, *args;
 {
   return symbols;
 }
 
-struct obj *primitive_eq(env, args)
-     struct obj **env, *args;
+obj_t *primitive_eq(env, args)
+     obj_t **env, *args;
 {
-  struct obj *a, *b;
+  obj_t *a, *b;
   a = FIRST(args);
   b = SECOND(args);
 
@@ -317,10 +319,10 @@ struct obj *primitive_eq(env, args)
   return (a == b) ? tru : nil;
 }
 
-struct obj *primitive_number_equals(env, args)
-     struct obj **env, *args;
+obj_t *primitive_number_equals(env, args)
+     obj_t **env, *args;
 {
-  struct obj *a, *b;
+  obj_t *a, *b;
   a = FIRST(args);
   b = SECOND(args);
   if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
@@ -328,17 +330,17 @@ struct obj *primitive_number_equals(env, args)
   return (a->value.i == b->value.i) ? tru : nil;
 }
 
-struct obj *primitive_not(env, args)
-     struct obj **env, *args;
+obj_t *primitive_not(env, args)
+     obj_t **env, *args;
 {
   return (nil == FIRST(args)) ? tru : nil;
 }
 
 
-struct obj *eval(form, env)
-  struct obj *form, **env;
+obj_t *eval(form, env)
+  obj_t *form, **env;
 {
-  struct obj *op, *arg, *args, *cond, *defn, *var, *val;
+  obj_t *op, *arg, *args, *cond, *defn, *var, *val;
   char * op_name;
 
   switch (form->type) {
@@ -420,7 +422,7 @@ struct obj *eval(form, env)
 
 char *symbol_chars = "~!@#$%^&*-_=+:/?<>";
 
-struct obj *read_sexp();
+obj_t *read_sexp();
 
 int whitespace(c)
      int c;
@@ -457,11 +459,11 @@ int getchar_skipping_whitespace() {
 }
 
 /* reverse a list */
-struct obj *reverse(p)
-     struct obj *p;
+obj_t *reverse(p)
+     obj_t *p;
 {
-  struct obj *ret = nil;
-  struct obj *head;
+  obj_t *ret = nil;
+  obj_t *head;
   while (nil != p) {
     head = p;
     p = CDR(p);
@@ -482,9 +484,9 @@ void skip_line() {
 }
 
 /* read a list, starting after a '(' has been read */
-struct obj *read_list() {
+obj_t *read_list() {
   int peeked;
-  struct obj *obj, *head, *last, *ret;
+  obj_t *obj, *head, *last, *ret;
   head = nil;
   for (;;) {
     peeked = peek_skipping_whitespace();
@@ -510,8 +512,8 @@ struct obj *read_list() {
 }
 
 /* translate 'x into (QUOTE x) */
-struct obj *read_quote() {
-  struct obj *sym, *tmp;
+obj_t *read_quote() {
+  obj_t *sym, *tmp;
   sym = intern("QUOTE");
   tmp = read_sexp();
   tmp = alloc_cons(tmp, nil);
@@ -520,7 +522,7 @@ struct obj *read_quote() {
 }
 
 /* read in a number, whose first digit is val */
-struct obj *read_number(val)
+obj_t *read_number(val)
      int val;
 {
   while (isdigit(peek()))
@@ -529,7 +531,7 @@ struct obj *read_number(val)
 }
 
 /* read in a symbol, whose first char is c */
-struct obj *read_symbol(c)
+obj_t *read_symbol(c)
      char c;
 {
   char buf[SYMBOL_MAX_LEN + 1];
@@ -550,9 +552,9 @@ struct obj *read_symbol(c)
   }
 }
 
-struct obj *read_sexp() {
+obj_t *read_sexp() {
   int c;
-  struct obj *o;
+  obj_t *o;
   for (;;) {
     c = getchar_skipping_whitespace();
     if (c == EOF) {
@@ -581,7 +583,7 @@ struct obj *read_sexp() {
 
 /* print an object */
 void print(o)
-     struct obj *o;
+     obj_t *o;
 {
   switch (o->type) {
   case TCONS:
@@ -631,7 +633,7 @@ void print(o)
 }
 
 void init_lisp (env)
-     struct obj **env;
+     obj_t **env;
 {
   nil = alloc_obj(TNIL);
   tru = alloc_obj(TTRUE);
@@ -677,7 +679,7 @@ void init_lisp (env)
 }
 
 void eval_form(f, env)
-  struct obj *f, **env;
+  obj_t *f, **env;
 {
   printf("\n INPUT: ");
   print(f);
@@ -689,7 +691,7 @@ void eval_form(f, env)
 }
 
 void main () {
-  struct obj *form, *root_env;
+  obj_t *form, *root_env;
   init_lisp(&root_env);
 
   fprintf(stderr, "welcome to bnlisp\n");

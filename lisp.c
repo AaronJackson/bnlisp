@@ -454,11 +454,13 @@ obj_t *primitive_setq(env, args)
   var = FIRST(args);
   assert(TSYMBOL == var->type);
   entry = lookup_env(*env, var);
+  /* we do this before EVAL so recursion works */
+  if (!entry) {
+    *env = push_env(*env, var, nil);
+    entry = lookup_env(*env, var);
+  }
   val = eval(SECOND(args), env);
-  if (!entry)
-    *env = push_env(*env, var, val);
-  else
-    CDR(entry) = val;
+  CDR(entry) = val;
   return val;
 }
 
@@ -570,7 +572,7 @@ obj_t *primitive_eq(env, args)
      obj_t **env, *args;
 {
   obj_t *a, *b;
-  obj_t *eargs = eval(args, env);
+  obj_t *eargs = evlis(args, env);
   a = FIRST(eargs);
   b = SECOND(eargs);
 
@@ -643,7 +645,12 @@ obj_t *eval(form, env)
 
   case TSYMBOL:
     val = lookup_env(*env, form);
-    if (!val) fuck("undefined variable");
+    if (!val) {
+      printf("undefined: ");
+      print(form);
+      putchar('\n');
+      fuck("undefined variable");
+    }
     return CDR(val);
 
     /* a form to evaluate: (f x1 x2 ...) */
@@ -654,6 +661,7 @@ obj_t *eval(form, env)
     args = CDR(form);
 
     if (TPRIMITIVE != op->type && TFUNCTION != op->type){
+      printf("got type %d\n", op->type);
       fuck("bad operator type");
     }
 

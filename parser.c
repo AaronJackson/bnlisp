@@ -97,9 +97,42 @@ obj_t *read_list() {
       CDR(head) = last;
       return ret;
     }
+
     obj = read_sexp();
+
     head = alloc_cons(obj, head);
   }
+}
+
+obj_t *read_string() {
+  int escaped = 0;
+  int c, i;
+  char *s = (char*)malloc(STRING_MAX_LEN*sizeof(char));
+
+  for (i=0 ;; i++) {
+    c = getchar();
+
+    if ('\\' == c && !escaped) { /* ESCAPE CHARACTER */
+      escaped = 1;
+      i--;
+    } else if ('"' == c && !escaped) { /* END OF STRING */
+      s[i] = '\0';
+      break;
+    } else if ('"' == c && escaped) { /* ESCAPED DOUBLE QUOTE */
+      s[i] = c;
+    } else if ('t' == c && escaped) { /* ESCAPED TAB */
+      s[i] = '\t';
+    } else if ('\\' == c && escaped) { /* ESCAPED BACKWARDS SLASH */
+      s[i] = '\\';
+    } else {
+      s[i] = c;
+    }
+    escaped = 0;
+    if (STRING_MAX_LEN == i) fuck("your string is too fucking long");
+  }
+
+  return alloc_string(s);
+
 }
 
 /* translate 'x into (QUOTE x) */
@@ -163,6 +196,9 @@ obj_t *read_sexp() {
     } else if (c == '-' && isdigit(peek())) {
       o = read_number(0);
       o->value.i = -o->value.i;
+      return o;
+    } else if (c == '"') {
+      o = read_string();
       return o;
     } else if (isalpha(c) || strchr(symbol_chars, c)) {
       return read_symbol(c);

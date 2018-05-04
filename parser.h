@@ -1,4 +1,5 @@
 #define SYMBOL_MAX_LEN 32
+#define STRING_MAX_LEN 128
 
 int whitespace();
 int peek();
@@ -8,6 +9,7 @@ obj_t *reverse();
 void skip_lines();
 obj_t *read_sexp();
 obj_t *read_list();
+obj_t *read_string();
 obj_t *read_quote();
 obj_t *read_number();
 obj_t *read_symbol();

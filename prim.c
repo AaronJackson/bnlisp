@@ -121,8 +121,6 @@ obj_t *primitive_cdr(env, args)
   return CDR(FIRST(eargs));
 }
 
-void print();
-
 obj_t *primitive_rplaca(env, args)
      obj_t **env, *args;
 {

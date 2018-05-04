@@ -32,11 +32,12 @@ typedef enum {
   TCONS,
   TSTRING,
   TSYMBOL,
-  TPRIMITIVE
+  TPRIMITIVE,
+  TFUNCTION
 } obj_type_t;
 
 /* function type: (obj **env, obj *args) -> obj *return */
-/* args are expected to have been evaluated */
+/* args have not been evaluated */
 typedef struct obj * (*primitive_t)();
 
 typedef struct obj {
@@ -44,18 +45,35 @@ typedef struct obj {
   union {
     /* when the object moves during GC, it gets a new location */
     /* struct obj *new_location; */
+
+    /* integers */
     int i;
+
+    /* strings */
     char *str;
+
+    /* symbols */
     struct {
       char *name;
     } sym;
+
+    /* cons cells */
     struct {
       struct obj *car;
       struct obj *cdr;
     } c;
+
+    /* primitive (C-implemented) functions */
     struct {
       primitive_t code;
     } prim;
+
+    /* functions*/
+    struct {
+      struct obj *params;
+      struct obj *body;
+      struct obj *env;
+    } fun;
   } value;
 } obj_t;
 
@@ -240,15 +258,15 @@ obj_t *alloc_int(val)
 obj_t * alloc_string(s)
      char * s;
 {
-  obj_t * x = alloc_obj(TSTRING);
+  obj_t *x = alloc_obj(TSTRING);
   x->value.str = s;
   return x;
 }
 
 obj_t * alloc_cons(ca, cd)
-  obj_t * ca, * cd;
+  obj_t *ca, *cd;
 {
-  obj_t * x = alloc_obj(TCONS);
+  obj_t *x = alloc_obj(TCONS);
   CAR(x) = ca;
   CDR(x) = cd;
   return x;
@@ -259,6 +277,16 @@ obj_t *alloc_primitive(code)
 {
   obj_t *x = alloc_obj(TPRIMITIVE);
   x->value.prim.code = code;
+  return x;
+}
+
+obj_t *alloc_function(params, body, env)
+     obj_t *params, *body, *env;
+{
+  obj_t *x = alloc_obj(TFUNCTION);
+  x->value.fun.params = params;
+  x->value.fun.body = body;
+  x->value.fun.env = env;
   return x;
 }
 
@@ -326,7 +354,7 @@ obj_t *lookup_env(env, sym)
     entry = CAR(env);
     assert(TCONS == entry->type);
     if (sym == CAR(entry))
-      return CDR(entry);
+      return entry;
   }
   return NULL;
 }
@@ -336,6 +364,25 @@ obj_t *push_env(env, sym, val)
 {
   obj_t *entry = alloc_cons(sym, val);
   return alloc_cons(entry, env);
+}
+
+/* syms: list of symbols
+   vals: list of evaluated values */
+obj_t *augment_env(env, syms, vals)
+  obj_t *env, *syms, *vals;
+{
+  obj_t *entry;
+  obj_t *aug_env = env;
+  if (list_length(syms) != list_length(vals)) fuck("fun/arg mismatch");
+  while (nil != syms) {
+    entry = alloc_cons(CAR(syms), CAR(vals));
+    aug_env = alloc_cons(entry, aug_env);
+    syms = CDR(syms);
+    vals = CDR(vals);
+  }
+  assert(nil == syms);
+  assert(nil == vals);
+  return aug_env;
 }
 
 obj_t *pop_env(env)
@@ -358,6 +405,8 @@ obj_t *evlis(args, env)
   obj_t * current = NULL;
   obj_t * node;
 
+  if (nil == args) return nil;
+
   for (node = args; node != nil; node = CDR(node)) {
     if (!current) {
       current = alloc_cons(nil, nil);
@@ -371,8 +420,8 @@ obj_t *evlis(args, env)
   return head;
 }
 
-obj_t * eval_progn(body, env)
-  obj_t *body, **env;
+obj_t *primitive_progn(env, body)
+  obj_t **env, *body;
 {
   obj_t *ret;
 
@@ -383,14 +432,67 @@ obj_t * eval_progn(body, env)
   return ret;
 }
 
+obj_t *primitive_quote(env, args)
+  obj_t **env, *args;
+{
+  return FIRST(args);
+}
+
+obj_t *primitive_lambda(env, args)
+  obj_t **env, *args;
+{
+  obj_t *params, *body;
+  params = FIRST(args);
+  body   = REST(args);
+  return alloc_function(params, body, *env);
+}
+
+obj_t *primitive_setq(env, args)
+  obj_t **env, *args;
+{
+  obj_t *entry, *var, *val;
+  var = FIRST(args);
+  assert(TSYMBOL == var->type);
+  entry = lookup_env(*env, var);
+  val = eval(SECOND(args), env);
+  if (!entry)
+    *env = push_env(*env, var, val);
+  else
+    CDR(entry) = val;
+  return val;
+}
+
+obj_t *primitive_if(env, args)
+  obj_t **env, *args;
+{
+  obj_t *cond = eval(args->value.c.car, env);
+  if (nil != cond)
+    return eval(SECOND(args), env);
+  else
+    return eval(THIRD(args), env);
+}
+
+obj_t *primitive_while(env, args)
+  obj_t **env, *args;
+{
+  obj_t *forms, *cond = FIRST(args);
+
+  while (nil != eval(cond, env)) {
+    for (forms = REST(args); nil != forms; forms = CDR(forms)) {
+      eval(CAR(forms), env);
+    }
+  }
+  return nil;
+}
+
 obj_t *primitive_add(env, args)
      obj_t **env, *args;
 {
   int sum = 0;
   obj_t *node, *node_val;
 
-  for (node = args; node != nil; node = node->value.c.cdr) {
-    node_val = node->value.c.car;
+  for (node = args; node != nil; node = CDR(node)) {
+    node_val = eval(CAR(node), env);
     if (TINT != node_val->type) fuck("can only add ints");
 
     sum += node_val->value.i;
@@ -402,39 +504,48 @@ obj_t *primitive_add(env, args)
 obj_t *primitive_eval(env, args)
      obj_t **env, *args;
 {
-  return eval(FIRST(args), env);
+  obj_t *eargs = evlis(args, env);
+  return eval(FIRST(eargs), env);
 }
 
 obj_t *primitive_cons(env, args)
      obj_t **env, *args;
 {
-  return alloc_cons(FIRST(args), SECOND(args));
+  obj_t *eargs = evlis(args, env);
+  return alloc_cons(FIRST(eargs), SECOND(eargs));
 }
 
 obj_t *primitive_car(env, args)
      obj_t **env, *args;
 {
-  return CAR(FIRST(args));
+  obj_t *eargs = evlis(args, env);
+  return CAR(FIRST(eargs));
 }
 
 obj_t *primitive_cdr(env, args)
      obj_t **env, *args;
 {
-  return CDR(FIRST(args));
+  obj_t *eargs = evlis(args, env);
+  return CDR(FIRST(eargs));
 }
+
+void print();
 
 obj_t *primitive_rplaca(env, args)
      obj_t **env, *args;
 {
-  CAR(FIRST(args)) = SECOND(args);
-  return FIRST(args);
+  obj_t *eargs = evlis(args, env);
+
+  CAR(FIRST(eargs)) = SECOND(eargs);
+  return FIRST(eargs);
 }
 
 obj_t *primitive_rplacd(env, args)
      obj_t **env, *args;
 {
-  CDR(FIRST(args)) = SECOND(args);
-  return FIRST(args);
+  obj_t *eargs = evlis(args, env);
+  CDR(FIRST(eargs)) = SECOND(eargs);
+  return FIRST(eargs);
 }
 
 
@@ -443,7 +554,7 @@ void print();
 obj_t *primitive_print(env, args)
      obj_t **env, *args;
 {
-  obj_t *arg = FIRST(args);
+  obj_t *arg = eval(FIRST(args), env);
   print(arg);
   putchar('\n');
   return arg;
@@ -459,8 +570,9 @@ obj_t *primitive_eq(env, args)
      obj_t **env, *args;
 {
   obj_t *a, *b;
-  a = FIRST(args);
-  b = SECOND(args);
+  obj_t *eargs = eval(args, env);
+  a = FIRST(eargs);
+  b = SECOND(eargs);
 
   /* type mismatch */
   if (a->type != b->type) return nil;
@@ -479,8 +591,9 @@ obj_t *primitive_number_equals(env, args)
      obj_t **env, *args;
 {
   obj_t *a, *b;
-  a = FIRST(args);
-  b = SECOND(args);
+  obj_t *eargs = evlis(args, env);
+  a = FIRST(eargs);
+  b = SECOND(eargs);
   if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
 
   return (a->value.i == b->value.i) ? tru : nil;
@@ -489,15 +602,34 @@ obj_t *primitive_number_equals(env, args)
 obj_t *primitive_not(env, args)
      obj_t **env, *args;
 {
-  return (nil == FIRST(args)) ? tru : nil;
+  obj_t *eargs = evlis(args, env);
+  return (nil == FIRST(eargs)) ? tru : nil;
 }
 
+
+obj_t *apply(fn, args, env)
+     obj_t *fn, *args, **env;
+{
+  obj_t *aug_env, *eargs;
+
+  if (TPRIMITIVE == fn->type) {
+    return fn->value.prim.code(env, args);
+  } else if (TFUNCTION == fn->type) {
+    /* env is ignored, because of lexical scope */
+    eargs = evlis(args, env);
+    aug_env = augment_env(fn->value.fun.env, fn->value.fun.params, eargs);
+    return primitive_progn(&aug_env, fn->value.fun.body);
+  } else {
+    fuck("can't apply this thing");
+  }
+  fuck("cant reach here");
+  return NULL;
+}
 
 obj_t *eval(form, env)
   obj_t *form, **env;
 {
-  obj_t *op, *arg, *args, *cond, *defn, *var, *val;
-  char * op_name;
+  obj_t *op, *args, *val;
 
   switch (form->type) {
     /* self evaluating forms */
@@ -506,65 +638,27 @@ obj_t *eval(form, env)
   case TINT:
   case TSTRING:
   case TPRIMITIVE:
+  case TFUNCTION:
     return form;
 
   case TSYMBOL:
-    return lookup_env(*env, form);
+    val = lookup_env(*env, form);
+    if (!val) fuck("undefined variable");
+    return CDR(val);
 
     /* a form to evaluate: (f x1 x2 ...) */
   case TCONS:
     if (!proper_list_p(form)) fuck("no bueno thing being eval'd");
 
-    op = form->value.c.car;
-    args = form->value.c.cdr;
+    op = eval(CAR(form), env);
+    args = CDR(form);
 
-    if (TSYMBOL != op->type && TPRIMITIVE != op->type){
+    if (TPRIMITIVE != op->type && TFUNCTION != op->type){
       fuck("bad operator type");
     }
 
-    if (TSYMBOL == op->type) {
-      defn = lookup_env(*env, op);
-    } else if (TPRIMITIVE == op->type) {
-      defn = op;
-    }
-
-    if (NULL != defn) {
-      assert(TPRIMITIVE == defn->type);
-      args = evlis(args, env);
-      return defn->value.prim.code(env, args);
-    } else {
-      op_name = op->value.sym.name;
-      if (0 == strcmp("QUOTE", op_name)) {
-        if (1 != list_length(args))
-          fuck("bad no. of args to QUOTE");
-        return args->value.c.car;
-      } else if (0 == strcmp("SETQ", op_name)) {
-        var = FIRST(args);
-        val = eval(SECOND(args), env);
-        *env = push_env(*env, var, val);
-        return val;
-      } else if (0 == strcmp("IF", op_name)) {
-        cond = eval(args->value.c.car, env);
-        if (nil != cond)
-          return eval(args->value.c.cdr->value.c.car, env);
-        else
-          return eval(args->value.c.cdr->value.c.cdr->value.c.car, env);
-      } else if (0 == strcmp("PROGN", op_name)) {
-        return eval_progn(args, env);
-      } else if (0 == strcmp("WHILE", op_name)) {
-        cond = FIRST(args);
-        args = REST(args);
-
-        while (nil != eval(cond, env)) {
-          for (arg = args; nil != arg; arg = CDR(arg)) {
-            eval(CAR(arg), env);
-          }
-        }
-        return nil;
-      } else {
-        fuck("bad list to eval");
-      }
-    }
+    return apply(op, args, env);
+    fuck("bug: shouldn't get here in eval");
   default:
     fuck("i don't know how to eval this object");
   }
@@ -783,6 +877,12 @@ void print(o)
     printf("<primitive>");
     return;
 
+  case TFUNCTION:
+    printf("<fn of ");
+    print(o->value.fun.params);
+    printf(">");
+    return;
+
   default:
     fuck("print: unknown type");
   }
@@ -800,6 +900,24 @@ void init_lisp ()
   VM->symbols = nil;
   VM->global_bindings = nil;
   env = &VM->global_bindings;
+  *env = push_env(*env,
+                  intern("PROGN"),
+                  alloc_primitive(primitive_progn));
+  *env = push_env(*env,
+                  intern("QUOTE"),
+                  alloc_primitive(primitive_quote));
+  *env = push_env(*env,
+                  intern("WHILE"),
+                  alloc_primitive(primitive_while));
+  *env = push_env(*env,
+                  intern("IF"),
+                  alloc_primitive(primitive_if));
+  *env = push_env(*env,
+                  intern("SETQ"),
+                  alloc_primitive(primitive_setq));
+  *env = push_env(*env,
+                  intern("LAMBDA"),
+                  alloc_primitive(primitive_lambda));
   *env = push_env(*env,
                   intern("+"),
                   alloc_primitive(primitive_add));

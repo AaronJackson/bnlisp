@@ -190,11 +190,14 @@ obj_t *primitive_number_equals(env, args)
 obj_t *primitive_string_equals(env, args)
   obj_t **env, *args;
 {
-  char *a, *b;
-  a = FIRST(args)->value.str;
-  b = SECOND(args)->value.str;
+  obj_t *a, *b;
+  a = FIRST(args);
+  b = SECOND(args);
 
-  return (0 == strcmp(a, b)) ? tru : nil;
+  if (TSTRING != a->type || TSTRING != b->type)
+    fuck("can't do STRING= on non-strings");
+
+  return (0 == strcmp(a->value.str, b->value.str)) ? tru : nil;
 }
 
 obj_t *primitive_not(env, args)

@@ -182,7 +182,7 @@ void print(o)
 void init_lisp ()
 {
   obj_t **env;
-  VM = alloc_vm(NUM_OBJECTS * OBJ_SIZE, STACK_SIZE);
+  VM = alloc_vm(NUM_OBJECTS * OBJ_SIZE);
   nil = alloc_obj(TNIL);
   tru = alloc_obj(TTRUE);
   VM->symbols = nil;
@@ -291,5 +291,5 @@ int main (argc, argv)
     }
   }
 
-exit(1);
+  exit(1);
 }

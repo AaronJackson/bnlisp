@@ -1,6 +1,6 @@
 
-#ifndef _INC_MACHINE_H
-#define _INC_MACHINE_H
+#ifndef BNLISP_MACHINE_H
+#define BNLISP_MACHINE_H
 
 typedef struct vm {
   /* memory */
@@ -13,21 +13,15 @@ typedef struct vm {
   obj_t *symbols;
   /* global environment - lisp list of cons cells */
   obj_t *global_bindings;
-  /* stack - a fixed size C array of void* */
-  int sp;
-  int stack_size;
-  void **stack;
 } vm_t;
 
 #define FRAME_END ((obj_t *) (-1))
 
 vm_t *alloc_vm();
-void push_stack();
-void pop_stack();
 void *forward();
 void gc();
 
 vm_t  *VM;
 
 
-#endif /* _INC_MACHINE_H */
+#endif /* BNLISP_MACHINE_H */

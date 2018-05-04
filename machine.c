@@ -4,14 +4,10 @@
 #include "obj.h"
 #include "machine.h"
 
-vm_t *alloc_vm(size, stack_size)
+vm_t *alloc_vm(size)
      size_t size;
-     int stack_size;
 {
   vm_t *vm = calloc(1, sizeof (vm_t));
-  vm->stack_size = stack_size;
-  vm->sp = stack_size - 1;
-  vm->stack = calloc(size, sizeof (void*));
   vm->semispace_size = size / OBJ_SIZE;
   vm->from_space = calloc(size, OBJ_SIZE);
   vm->to_space = calloc(size, OBJ_SIZE);
@@ -20,25 +16,6 @@ vm_t *alloc_vm(size, stack_size)
   vm->symbols = NULL;
   vm->global_bindings = NULL;
   return vm;
-}
-
-void push_stack(p)
-     void *p;
-{
-  if (0 == VM->sp) {
-    fuck("stack overflow");
-  }
-  VM->stack[--VM->sp] = p;
-}
-
-void pop_stack(n)
-     int n;
-{
-  if (VM->sp + n >= VM->stack_size) {
-    VM->sp = VM->stack_size - 1;
-  } else {
-    VM->sp += n;
-  }
 }
 
 #if 0
@@ -98,13 +75,7 @@ void gc() {
 
   /* traverse stack */
   fprintf(stderr, "S");
-  for (i = VM->sp; i < VM->stack_size - 1; i++) {
-    frame_pointer = (obj_t **)VM->stack[i];
-    for (j = 0; FRAME_END != frame_pointer[j]; j++) {
-      if (frame_pointer[j])
-        frame_pointer[j] = forward(frame_pointer[j]);
-    }
-  }
+  /* TODO */
 
   /* traverse the symbols */
   fprintf(stderr, "s");

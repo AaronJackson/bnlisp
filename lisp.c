@@ -10,9 +10,22 @@
 #include <ctype.h>
 #include <assert.h>
 
+/***** UTILITIES *****/
+
+void fuck(msg)
+     char * msg;
+{
+  printf("fuck: %s\n", msg);
+  exit(1);
+}
+
+
 /***** OBJECT REPRESENTATION *****/
 
 typedef enum {
+  /* states */
+  /* STATE_FORWARDED, */
+  /* types */
   TNIL,
   TTRUE,
   TINT,
@@ -29,6 +42,8 @@ typedef struct obj * (*primitive_t)();
 typedef struct obj {
   int type;
   union {
+    /* when the object moves during GC, it gets a new location */
+    /* struct obj *new_location; */
     int i;
     char *str;
     struct {
@@ -44,6 +59,8 @@ typedef struct obj {
   } value;
 } obj_t;
 
+#define OBJ_SIZE (sizeof (obj_t))
+
 #define CAR(x) ((x)->value.c.car)
 #define CDR(x) ((x)->value.c.cdr)
 #define FIRST(x) CAR(x)
@@ -51,19 +68,168 @@ typedef struct obj {
 #define THIRD(x) CAR(CDR(CDR(x)))
 #define REST(x) CDR(x)
 
+/***** MACHINE REPRESENTATION *****/
+
+typedef struct vm {
+  /* memory */
+  size_t semispace_size;
+  obj_t *from_space;
+  obj_t *to_space;
+  size_t alloc_offset;
+  size_t to_space_offset;
+  /* symbol intern table - lisp list of symbols */
+  obj_t *symbols;
+  /* global environment - lisp list of cons cells */
+  obj_t *global_bindings;
+  /* stack - a fixed size C array of void* */
+  int sp;
+  int stack_size;
+  void **stack;
+} vm_t;
+
 /* initialized by init_lisp */
 obj_t *nil = NULL;
 obj_t *tru = NULL;
+vm_t  *VM = NULL;
+
+vm_t *alloc_vm(size, stack_size)
+     size_t size;
+{
+  vm_t *vm = calloc(1, sizeof (vm_t));
+  vm->stack_size = stack_size;
+  vm->sp = stack_size - 1;
+  vm->stack = calloc(size, sizeof (void*));
+  vm->semispace_size = size / OBJ_SIZE;
+  vm->from_space = calloc(size, OBJ_SIZE);
+  vm->to_space = calloc(size, OBJ_SIZE);
+  vm->alloc_offset = 0;
+  vm->to_space_offset = 0;
+  vm->symbols = NULL;
+  vm->global_bindings = NULL;
+  return vm;
+}
+
+void push_stack(p)
+     void *p;
+{
+  if (0 == VM->sp) {
+    fuck("stack overflow");
+  }
+  VM->stack[--VM->sp] = p;
+}
+
+void pop_stack(n)
+     int n;
+{
+  if (VM->sp + n >= VM->stack_size) {
+    VM->sp = VM->stack_size - 1;
+  } else {
+    VM->sp += n;
+  }
+}
+
+#if 0
+/* forward o to the to_space, and return where it ended up */
+obj_t *forward(o)
+     obj_t *o;
+{
+  obj_t *ca, *cd;
+  /* if it has already been moved, just return it */
+  if (STATE_FORWARDED == o->type) return o;
+  switch (o->type) {
+  case TNIL:
+  case TTRUE:
+  case TINT:
+  case TSTRING:
+  case TSYMBOL:
+  case TPRIMITIVE:
+    memcpy((void *)(VM->to_space + VM->to_space_offset), o, OBJ_SIZE);
+    o->type = STATE_FORWARDED;
+    o->value.new_location = VM->to_space + VM->to_space_offset;
+    VM->to_space_offset++;
+    return o->value.new_location;
+
+  case TCONS:
+    ca = CAR(o);
+    cd = CDR(o);
+    memcpy((void *)(VM->to_space + VM->to_space_offset), o, OBJ_SIZE);
+    o->type = STATE_FORWARDED;
+    o->value.new_location = VM->to_space + VM->to_space_offset;
+    VM->to_space_offset++;
+    CAR(o->value.new_location) = forward(ca);
+    CDR(o->value.new_location) = forward(cd);
+    return o->value.new_location;
+
+  default:
+    fuck("unknown type to forward");
+  }
+  /* unreachable */
+  return NULL;
+}
+
+#define FRAME_END ((obj_t *) (-1))
+#endif
+
+void gc() {
+  #if 0
+  obj_t *tmp;
+  size_t allocated = VM->alloc_offset;
+  int i, j;
+  obj_t **frame_pointer;
+
+  fprintf(stderr, "\ngc start... ");
+
+  /* traverse the constants */
+  fprintf(stderr, "c");
+  forward(nil);
+  forward(tru);
+
+  /* traverse stack */
+  fprintf(stderr, "S");
+  for (i = VM->sp; i < VM->stack_size - 1; i++) {
+    frame_pointer = (obj_t **)VM->stack[i];
+    for (j = 0; FRAME_END != frame_pointer[j]; j++) {
+      if (frame_pointer[j])
+        frame_pointer[j] = forward(frame_pointer[j]);
+    }
+  }
+
+  /* traverse the symbols */
+  fprintf(stderr, "s");
+  VM->symbols = forward(VM->symbols);
+
+  /* traverse the global bindings */
+  fprintf(stderr, "g");
+  VM->global_bindings = forward(VM->global_bindings);
+
+  /* expunge and swap */
+  VM->alloc_offset = VM->to_space_offset;
+  VM->to_space_offset = 0;
+  memset(VM->from_space, 0, VM->semispace_size * OBJ_SIZE);
+  tmp = VM->from_space;
+  VM->from_space = VM->to_space;
+  VM->to_space = VM->from_space;
+
+
+  fprintf(stderr, " done: %zu -> %zu\n", allocated, VM->alloc_offset);
+  #endif
+  return;
+}
 
 obj_t * alloc_obj(type)
      obj_type_t type;
 {
-  obj_t *o = (obj_t *)calloc(1, sizeof (obj_t));
+  obj_t *o;
+
+  if (VM->alloc_offset == VM->semispace_size) gc();
+  if (VM->alloc_offset == VM->semispace_size) fuck("game over");
+
+  o = &VM->from_space[++VM->alloc_offset];
   o->type = type;
   return o;
 }
 
-obj_t * alloc_int(val)
+obj_t *alloc_int(val)
      int val;
 {
   obj_t * x = alloc_obj(TINT);
@@ -83,8 +249,8 @@ obj_t * alloc_cons(ca, cd)
   obj_t * ca, * cd;
 {
   obj_t * x = alloc_obj(TCONS);
-  x->value.c.car = ca;
-  x->value.c.cdr = cd;
+  CAR(x) = ca;
+  CDR(x) = cd;
   return x;
 }
 
@@ -96,13 +262,11 @@ obj_t *alloc_primitive(code)
   return x;
 }
 
-obj_t *symbols;
-
 obj_t *find_symbol(name)
      char *name;
 {
   obj_t *entry, *table, *val;
-  for (table = symbols; nil != table; table = CDR(table)) {
+  for (table = VM->symbols; nil != table; table = CDR(table)) {
     entry = CAR(table);
     assert(TSYMBOL == entry->type);
     if (0 == strcmp(entry->value.sym.name, name)) {
@@ -112,37 +276,25 @@ obj_t *find_symbol(name)
   return NULL;
 }
 
-obj_t *alloc_symbol(name, intern)
+obj_t *alloc_symbol(name)
      char *name;
-     int intern;
 {
   obj_t *x;
-  if (intern) {
-    x = find_symbol(name);
-    if (!x) {
-      x = alloc_obj(TSYMBOL);
-      x->value.sym.name = name;
-      symbols = alloc_cons(x, symbols);
-    }
-  } else {
-    /* make a fresh symbol */
-    x = alloc_obj(TSYMBOL);
-    x->value.sym.name = name;
-  }
+  x = alloc_obj(TSYMBOL);
+  x->value.sym.name = name;
   return x;
 }
 
 obj_t *intern(name)
      char *name;
 {
-  return alloc_symbol(name, 1);
-}
-
-void fuck(msg)
-     char * msg;
-{
-  printf("fuck: %s\n", msg);
-  exit(1);
+  obj_t *x;
+  x = find_symbol(name);
+  if (!x) {
+    x = alloc_symbol(name);
+    VM->symbols = alloc_cons(x, VM->symbols);
+  }
+  return x;
 }
 
 int proper_list_p(o)
@@ -162,6 +314,8 @@ int list_length(o)
   for (node = o; node != nil; node = node->value.c.cdr) len++;
   return len;
 }
+
+/***** ENVIRONMENTS *****/
 
 obj_t *lookup_env(env, sym)
   obj_t *env, *sym;
@@ -192,10 +346,12 @@ obj_t *pop_env(env)
   return CDR(env);
 }
 
-obj_t * eval();
+/***** EVALUATION *****/
+
+obj_t *eval();
 
 /* eval each element of a list */
-obj_t * evlis(args, env)
+obj_t *evlis(args, env)
   obj_t *args, **env;
 {
   obj_t * head = NULL;
@@ -296,7 +452,7 @@ obj_t *primitive_print(env, args)
 obj_t *primitive_all_symbols(env, args)
      obj_t **env, *args;
 {
-  return symbols;
+  return VM->symbols;
 }
 
 obj_t *primitive_eq(env, args)
@@ -632,13 +788,18 @@ void print(o)
   }
 }
 
-void init_lisp (env)
-     obj_t **env;
+#define NUM_OBJECTS 1024
+#define STACK_SIZE 512
+
+void init_lisp ()
 {
+  obj_t **env;
+  VM = alloc_vm(NUM_OBJECTS * OBJ_SIZE, STACK_SIZE);
   nil = alloc_obj(TNIL);
   tru = alloc_obj(TTRUE);
-  symbols = nil;
-  *env = nil;
+  VM->symbols = nil;
+  VM->global_bindings = nil;
+  env = &VM->global_bindings;
   *env = push_env(*env,
                   intern("+"),
                   alloc_primitive(primitive_add));
@@ -691,15 +852,15 @@ void eval_form(f, env)
 }
 
 int main () {
-  obj_t *form, *root_env;
-  init_lisp(&root_env);
+  obj_t *form;
+  init_lisp();
 
   fprintf(stderr, "welcome to bnlisp\n");
 
   for (;;) {
     form = read_sexp();
     if (!form) break;
-    eval_form(form, &root_env);
+    eval_form(form, &VM->global_bindings);
   }
   exit(1);
 }

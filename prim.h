@@ -1,3 +1,6 @@
+#ifndef BNLISP_PRIM_H
+#define BNLISP_PRIM_H
+
 obj_t *primitive_progn();
 obj_t *primitive_quote();
 obj_t *primitive_lambda();
@@ -18,3 +21,7 @@ obj_t *primitive_number_equals();
 obj_t *primitive_string_equals();
 obj_t *primitive_not();
 obj_t *primitive_readchar();
+obj_t *primitive_read();
+
+#endif
+

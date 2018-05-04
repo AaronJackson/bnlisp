@@ -9,6 +9,7 @@
 #include "alloc.h"
 #include "lisp.h"
 #include "env.h"
+#include "parser.h"
 #include "prim.h"
 
 obj_t *primitive_progn(env, body)
@@ -217,4 +218,10 @@ obj_t *primitive_readchar(env, args)
   s[0] = c;
   s[1] = '\0';
   return alloc_string(s);
+}
+
+obj_t *primitive_read(env, args)
+  obj_t **env, *args;
+{
+  return read_sexp();
 }

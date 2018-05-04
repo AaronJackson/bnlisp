@@ -112,6 +112,8 @@ obj_t *eval(form, env)
 void print(o)
      obj_t *o;
 {
+  int i;
+  char c;
   switch (o->type) {
   case TCONS:
     putchar('(');
@@ -131,7 +133,19 @@ void print(o)
     return;
 
   case TSTRING:
-    printf("%s", o->value.str);
+    putchar('"');
+    for (i = 0; o->value.str[i]; i++) {
+      c = o->value.str[i];
+      if ('\t' == c)
+        printf("\\t");
+      else if ('"' == c)
+        printf("\\\"");
+      else if ('\\' == c)
+        printf("\\\\");
+      else
+        putchar(c);
+    }
+    putchar('"');
     return;
 
   case TSYMBOL:
@@ -234,6 +248,9 @@ void init_lisp ()
   *env = push_env(*env,
 		  intern("READ-CHAR"),
 		  alloc_primitive(primitive_readchar));
+  *env = push_env(*env,
+		  intern("READ"),
+		  alloc_primitive(primitive_read));
 
 }
 

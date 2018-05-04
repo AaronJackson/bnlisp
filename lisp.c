@@ -690,7 +690,7 @@ void eval_form(f, env)
   printf("\n");
 }
 
-void main () {
+int main () {
   obj_t *form, *root_env;
   init_lisp(&root_env);
 
@@ -701,4 +701,5 @@ void main () {
     if (!form) break;
     eval_form(form, &root_env);
   }
+  exit(1);
 }

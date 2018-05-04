@@ -17,3 +17,9 @@
 (SETQ REPL (LAMBDA ()
              (WHILE T
                (PRINT (EVAL (READ))))))
+
+(SETQ TAKE (LAMBDA (N L)
+              (IF (= 0 N)
+                  NIL
+                  (CONS (TAKE (CDR L) (+ N -1))
+                        (CAR L)))))

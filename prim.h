@@ -23,5 +23,6 @@ obj_t *primitive_not();
 obj_t *primitive_readchar();
 obj_t *primitive_read();
 obj_t *primitive_load();
+obj_t *primitive_concatenate();
 #endif
 

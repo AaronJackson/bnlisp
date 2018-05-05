@@ -254,3 +254,28 @@ obj_t *primitive_load(env, args)
 
   return tru;
 }
+
+obj_t *primitive_concatenate(env, args)
+  obj_t **env, *args;
+{
+  if (CAR(CAR(args))->type != TSYMBOL ||
+      0 != strcmp("QUOTE", CAR(CAR(args))->value.str))
+    fuck("concatenate must specify type");
+
+  obj_t *a, *b;
+  a = SECOND(args);
+  b = THIRD(args);
+
+  char *s = (char*)malloc(STRING_MAX_LEN+sizeof(char));
+  strcat(s, a->value.str);
+  strcat(s, b->value.str);
+
+  char *type = SECOND(CAR(args))->value.str;
+  if (0 == strcmp(type, "STRING")) { /* CONCAT STRING */
+    return alloc_string(s);
+  } else if (0 == strcmp(type, "LIST")) { /* CONCAT LIST */
+    fuck('not yet implemented');
+  }
+
+  return tru;
+}

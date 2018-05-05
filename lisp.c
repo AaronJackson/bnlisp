@@ -254,6 +254,9 @@ void init_lisp ()
   *env = push_env(*env,
 		  intern("LOAD"),
 		  alloc_primitive(primitive_load));
+  *env = push_env(*env,
+		  intern("CONCATENATE"),
+		  alloc_primitive(primitive_concatenate));
 
 }
 

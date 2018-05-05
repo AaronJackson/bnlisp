@@ -266,7 +266,9 @@ obj_t *primitive_concatenate(env, args)
   a = SECOND(args);
   b = THIRD(args);
 
-  char *s = (char*)malloc(STRING_MAX_LEN+sizeof(char));
+  char *s = (char*)malloc((strlen(a->value.str)+
+			   strlen(b->value.str)+
+			   1)*sizeof(char));
   strcat(s, a->value.str);
   strcat(s, b->value.str);
 
@@ -274,7 +276,7 @@ obj_t *primitive_concatenate(env, args)
   if (0 == strcmp(type, "STRING")) { /* CONCAT STRING */
     return alloc_string(s);
   } else if (0 == strcmp(type, "LIST")) { /* CONCAT LIST */
-    fuck('not yet implemented');
+    fuck("not yet implemented");
   }
 
   return tru;

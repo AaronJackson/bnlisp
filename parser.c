@@ -22,8 +22,8 @@ int whitespace(c)
 }
 
 int peek() {
-  int c = getchar();
-  ungetc(c, stdin);
+  int c = getc(stream_i);
+  ungetc(c, stream_i);
   return c;
 }
 
@@ -32,7 +32,7 @@ int peek_skipping_whitespace() {
   for (;;) {
     peeked = peek();
     if (whitespace(peeked)) {
-      assert(whitespace(getchar()));
+      assert(whitespace(getc(stream_i)));
     } else {
       return peeked;
     }
@@ -42,9 +42,9 @@ int peek_skipping_whitespace() {
 int getchar_skipping_whitespace() {
   for (;;) {
     if (whitespace(peek())) {
-      assert(whitespace(getchar()));
+      assert(whitespace(getc(stream_i)));
     } else {
-      return getchar();
+      return getc(stream_i);
     }
   }
 }
@@ -68,7 +68,7 @@ obj_t *reverse(p)
 void skip_line() {
   int c;
   for (;;) {
-    c = getchar();
+    c = getc(stream_i);
     if (c == EOF || c == '\n')
       return;
   }
@@ -84,12 +84,12 @@ obj_t *read_list() {
     if (EOF == peeked) fuck("unclosed parenthesis");
     if (')' == peeked) {
       /* skip the paren */
-      (void)getchar();
+      (void)getc(stream_i);
       return reverse(head);
     }
     if ('.' == peeked) {
       /* skip the dot */
-      (void)getchar();
+      (void)getc(stream_i);
       last = read_sexp();
       if (')' != getchar_skipping_whitespace())
         fuck("closed parenthesis expected after dot");
@@ -110,7 +110,7 @@ obj_t *read_string() {
   char *s = (char*)malloc(STRING_MAX_LEN*sizeof(char));
 
   for (i=0 ;; i++) {
-    c = getchar();
+    c = getc(stream_i);
 
     if ('\\' == c && !escaped) { /* ESCAPE CHARACTER */
       escaped = 1;
@@ -151,7 +151,7 @@ obj_t *read_number(val)
      int val;
 {
   while (isdigit(peek()))
-    val = 10 * val + (getchar() - '0');
+    val = 10 * val + (getc(stream_i) - '0');
   return alloc_int(val);
 }
 
@@ -165,7 +165,7 @@ obj_t *read_symbol(c)
   while (isalnum(peek()) || strchr(symbol_chars, peek())) {
     if (SYMBOL_MAX_LEN <= len)
       fuck("symbol name too damn long");
-    buf[len++] = getchar();
+    buf[len++] = getc(stream_i);
   }
   buf[len] = '\0';
   if (0 == strcmp(buf, "NIL")) {
@@ -177,7 +177,8 @@ obj_t *read_symbol(c)
   }
 }
 
-obj_t *read_sexp() {
+obj_t *read_sexp()
+{
   int c;
   obj_t *o;
   for (;;) {

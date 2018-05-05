@@ -251,6 +251,9 @@ void init_lisp ()
   *env = push_env(*env,
 		  intern("READ"),
 		  alloc_primitive(primitive_read));
+  *env = push_env(*env,
+		  intern("LOAD"),
+		  alloc_primitive(primitive_load));
 
 }
 
@@ -276,10 +279,10 @@ int main (argc, argv)
   silent = (argc > 1 && 0 == strcmp(argv[1], "-s"));
 
   init_lisp();
+  stream_i = stdin;
+  stream_o = stdout;
 
   fprintf(stderr, "welcome to bnlisp\n");
-
-
 
   for (;;) {
     form = read_sexp();

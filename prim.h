@@ -22,6 +22,6 @@ obj_t *primitive_string_equals();
 obj_t *primitive_not();
 obj_t *primitive_readchar();
 obj_t *primitive_read();
-
+obj_t *primitive_load();
 #endif
 

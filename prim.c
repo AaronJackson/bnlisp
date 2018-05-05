@@ -225,3 +225,32 @@ obj_t *primitive_read(env, args)
 {
   return read_sexp();
 }
+
+obj_t *primitive_load(env, args)
+  obj_t **env, *args;
+{
+  char *path = CAR(args)->value.str;
+  char c;
+  FILE *fid = fopen(path, "r");
+  obj_t *form;
+
+  if (NULL == fid)
+    return nil;
+
+  stream_i = fid;
+  while (EOF != (c = fgetc(fid))) {
+    ungetc(c, fid);
+    /* putchar(c); */
+    form = read_sexp();
+    if (NULL != form)
+      eval_form(form, &VM->global_bindings);
+  }
+  stream_i = stdin;
+
+  /* eval(form, &VM->global_bindings); */
+  /* print(form); */
+
+  fclose(fid);
+
+  return tru;
+}

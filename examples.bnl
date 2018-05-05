@@ -35,3 +35,6 @@
 (STRING= (PRINT "Hello there") "Hello there")
 (STRING= (CAR '("A")) "A")
 (STRING= (CAR '("A")) "B")
+(STRING= (CONCATENATE 'STRING "A" "B") "AB")
+(LOAD "lib.bnl")
+(DOUBLE 2)

@@ -1,5 +1,9 @@
 * bnlisp, a lisp for 2.11BSD
 
+#+BEGIN_SRC
+[2017-08-02 19:16:49] <bnl> C is great because it lets me write scheme
+#+END_SRC
+
 bnl (Marc Cleave) was a fan of, among other things, Lisp, PDP-11s and
 UNIX. In bnlisp, we try to encapsulate some of these interests by
 building a lisp interpreter which runs on the PDP-11 under 2.11BSD.

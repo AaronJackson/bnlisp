@@ -278,6 +278,9 @@ void init_lisp ()
 		  intern("STREAM-READ"),
 		  alloc_primitive(primitive_stream_read));
   *env = push_env(*env,
+  		  intern("STREAM-WRITE"),
+  		  alloc_primitive(primitive_stream_write));
+  *env = push_env(*env,
 		  intern("STREAM-EOF?"),
 		  alloc_primitive(primitive_stream_iseof));
 

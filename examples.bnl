@@ -38,3 +38,12 @@
 (STRING= (CONCATENATE 'STRING "A" "B") "AB")
 (LOAD "lib.bnl")
 (DOUBLE 2)
+
+
+(SETQ file (STREAM-OPEN 'FILE "file.txt"))
+(STREAM-WRITE file "Hello there")
+(STREAM-CLOSE file)
+(SETQ file (STREAM-OPEN 'FILE "file.txt"))
+(WHILE (NOT (STREAM-EOF? file))
+       (PRINT (STREAM-READ file)))
+(STREAM-CLOSE file)

@@ -309,7 +309,7 @@ obj_t *primitive_stream_open(env, args)
 
   type = CAR(eargs)->value.str;
   if (0 == strcmp(type, "FILE")) {
-    stream = fopen(SECOND(eargs)->value.str, "r");
+    stream = fopen(SECOND(eargs)->value.str, "ab+");
     if (NULL == stream) {
       return nil;
     }
@@ -360,6 +360,24 @@ obj_t *primitive_stream_read(env, args)
   }
 }
 
+/* (STREAM-WRITE stream string) */
+obj_t *primitive_stream_write(env, args)
+  obj_t **env, *args;
+{
+  obj_t *s = evlis(args, env);
+
+  if (TSTREAM == CAR(s)->type) {
+    fprintf(CAR(s)->value.stream,
+	    CAR(CDR(s))->value.str);
+    return tru;
+  } else if (TSOCKET == CAR(s)->type) {
+    return nil;
+  } else {
+    fuck("That is not a stream or a socket!");
+  }
+}
+
+
 /* (STREAM-EOF? stream) */
 obj_t *primitive_stream_iseof(env, args)
   obj_t **env, *args;
@@ -374,5 +392,5 @@ obj_t *primitive_stream_iseof(env, args)
     return tru;
   } else {
     fuck("That is not a stream or a socket!");
-  } 
+  }
 }

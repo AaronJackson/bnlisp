@@ -258,26 +258,121 @@ obj_t *primitive_load(env, args)
 obj_t *primitive_concatenate(env, args)
   obj_t **env, *args;
 {
+  obj_t *a, *b;
+  char *s, *type;
+  obj_t *eargs = evlis(args,env);
+
   if (CAR(CAR(args))->type != TSYMBOL ||
       0 != strcmp("QUOTE", CAR(CAR(args))->value.str))
     fuck("concatenate must specify type");
 
-  obj_t *a, *b;
-  a = SECOND(args);
-  b = THIRD(args);
+  a = SECOND(eargs);
+  b = THIRD(eargs);
 
-  char *s = (char*)malloc((strlen(a->value.str)+
-			   strlen(b->value.str)+
-			   1)*sizeof(char));
-  strcat(s, a->value.str);
-  strcat(s, b->value.str);
-
-  char *type = SECOND(CAR(args))->value.str;
+  type = CAR(eargs)->value.str;
   if (0 == strcmp(type, "STRING")) { /* CONCAT STRING */
+    s = (char*)malloc((strlen(a->value.str)+
+		       strlen(b->value.str)+
+		       1)*sizeof(char));
+    strcat(s, a->value.str);
+    strcat(s, b->value.str);
     return alloc_string(s);
   } else if (0 == strcmp(type, "LIST")) { /* CONCAT LIST */
     fuck("not yet implemented");
   }
 
   return tru;
+}
+
+
+/********************************************************************/
+/*                    STREAMS and SOCKETS                           */
+/********************************************************************/
+
+/* (STREAM-OPEN 'FILE path)
+   (STREAM-OPEN 'TCP host port)
+   (STREAM-OPEN 'UDP host port)
+*/
+obj_t *primitive_stream_open(env, args)
+  obj_t **env, *args;
+{
+  char *type;
+  FILE *stream;
+  int socket;
+  obj_t *x;
+  obj_t *eargs = evlis(args, env);
+
+  if (CAR(CAR(args))->type != TSYMBOL ||
+      0 != strcmp("QUOTE", CAR(CAR(args))->value.str)) {
+    fuck("must specify file, tcp or udp");
+  }
+
+  type = CAR(eargs)->value.str;
+  if (0 == strcmp(type, "FILE")) {
+    stream = fopen(SECOND(eargs)->value.str, "r");
+    if (NULL == stream) {
+      return nil;
+    }
+    return alloc_stream(stream);
+  } else if (0 == strcmp(type, "TCP")) {
+
+  } else if (0 == strcmp(type, "UDP")) {
+
+  } else {
+    fuck("Only supported streams are FILE, TCP, UDP");
+  }
+
+  return nil;
+}
+
+/* (STREAM-CLOSE stream) */
+obj_t *primitive_stream_close(env, args)
+  obj_t **env, *args;
+{
+  obj_t *s = evlis(args, env);
+  if (TSTREAM == CAR(s)->type) {
+    fclose(CAR(s)->value.stream);
+    return tru;
+  } else if (TSOCKET == CAR(s)->type) {
+
+    return tru;
+  } else {
+    fuck("That's not a stream or a socket!");
+  }
+}
+
+/* (STREAM-READ stream) */
+obj_t *primitive_stream_read(env, args)
+  obj_t **env, *args;
+{
+  int c[2];
+
+  obj_t *s = evlis(args, env);
+
+  if (TSTREAM == CAR(s)->type) {
+    c[0] = fgetc(CAR(s)->value.stream);
+    c[1] = 0;
+    return alloc_string(c);
+  } else if (TSOCKET == CAR(s)->type) {
+    return tru;
+  } else {
+    fuck("That is not a stream or a socket!");
+  }
+}
+
+/* (STREAM-EOF? stream) */
+obj_t *primitive_stream_iseof(env, args)
+  obj_t **env, *args;
+{
+  char c;
+  obj_t *s = evlis(args, env);
+  if (TSTREAM == CAR(s)->type) {
+    c = getc(CAR(s)->value.stream);
+    ungetc(c, CAR(s)->value.stream);
+    return c == EOF ? tru : nil;
+  } else if (TSOCKET == CAR(s)->type) {
+    return tru;
+  } else {
+    fuck("That is not a stream or a socket!");
+  } 
 }

@@ -1,3 +1,9 @@
+#include <stdio.h>
+
+/* Both TSOCKET and TSTREAM are handled with the same set of
+ *  primitives STREAM-*, but the type needs to be preserved
+ *  separately.
+ */
 
 typedef enum {
   /* states */
@@ -10,7 +16,9 @@ typedef enum {
   TSTRING,
   TSYMBOL,
   TPRIMITIVE,
-  TFUNCTION
+  TFUNCTION,
+  TSOCKET, /* INET Socket Stream */
+  TSTREAM /* FILE stream */
 } obj_type_t;
 
 /* function type: (obj **env, obj *args) -> obj *return */
@@ -23,11 +31,14 @@ typedef struct obj {
     /* when the object moves during GC, it gets a new location */
     /* struct obj *new_location; */
 
-    /* integers */
+    /* TINT and TSOCKET */
     int i;
 
-    /* strings */
+    /* TSTRING */
     char *str;
+
+    /* TSTREAM pointer  */
+    FILE *stream;
 
     /* symbols */
     struct {

@@ -24,5 +24,9 @@ obj_t *primitive_readchar();
 obj_t *primitive_read();
 obj_t *primitive_load();
 obj_t *primitive_concatenate();
+obj_t *primitive_stream_open();
+obj_t *primitive_stream_close();
+obj_t *primitive_stream_read();
+obj_t *primitive_stream_iseof();
 #endif
 

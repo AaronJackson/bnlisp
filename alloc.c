@@ -61,3 +61,20 @@ obj_t *alloc_function(params, body, env)
   x->value.fun.env = env;
   return x;
 }
+
+obj_t *alloc_socket(socket)
+     int socket;
+{
+  obj_t * x = alloc_obj(TSOCKET);
+  x->value.i = socket;
+  return x;
+}
+
+
+obj_t *alloc_stream(stream)
+     FILE *stream;
+{
+  obj_t *x = alloc_obj(TSTREAM);
+  x->value.stream = stream;
+  return x;
+}

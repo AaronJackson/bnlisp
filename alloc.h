@@ -5,3 +5,5 @@ obj_t *alloc_string();
 obj_t *alloc_cons();
 obj_t *alloc_primitive();
 obj_t *alloc_function();
+obj_t *alloc_socket();
+obj_t *alloc_stream();

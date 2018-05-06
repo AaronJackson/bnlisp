@@ -75,6 +75,8 @@ obj_t *eval(form, env)
   case TSTRING:
   case TPRIMITIVE:
   case TFUNCTION:
+  case TSOCKET:
+  case TSTREAM:
     return form;
 
   case TSYMBOL:
@@ -174,6 +176,13 @@ void print(o)
     printf(">");
     return;
 
+  case TSTREAM:
+    printf("<stream file>");
+    return;
+
+  case TSOCKET:
+    printf("<stream network>");
+
   default:
     fuck("print: unknown type");
   }
@@ -257,6 +266,20 @@ void init_lisp ()
   *env = push_env(*env,
 		  intern("CONCATENATE"),
 		  alloc_primitive(primitive_concatenate));
+
+  /* SOCKETS and STREAMS */
+  *env = push_env(*env,
+		  intern("STREAM-OPEN"),
+		  alloc_primitive(primitive_stream_open));
+  *env = push_env(*env,
+		  intern("STREAM-CLOSE"),
+		  alloc_primitive(primitive_stream_close));
+  *env = push_env(*env,
+		  intern("STREAM-READ"),
+		  alloc_primitive(primitive_stream_read));
+  *env = push_env(*env,
+		  intern("STREAM-EOF?"),
+		  alloc_primitive(primitive_stream_iseof));
 
 }
 

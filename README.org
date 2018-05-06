@@ -10,24 +10,32 @@ building a lisp interpreter which runs on the PDP-11 under 2.11BSD.
 
 It is currently full of memory leaks, so, enjoy.
 
-A small example:
+** Primitives
 
-#+BEGIN_SRC
-$ ./lisp
-welcome to bnlisp
-(SETQ PDP 11)
-(PRINT (CONS (QUOTE THE)
-	     (CONS (QUOTE PDP)
-		   (CONS PDP  (CONS (QUOTE IS)
-				    (CONS (QUOTE COOL) NIL))))))
- INPUT: (SETQ PDP 11)
-OUTPUT: 11
-
-
- INPUT: (PRINT (CONS (QUOTE THE) (CONS (QUOTE PDP) (CONS PDP (CONS (QUOTE IS) (CONS (QUOTE COOL) NIL))))))
-(THE PDP 11 IS COOL)
-OUTPUT: (THE PDP 11 IS COOL)
-
-#+END_SRC
+- PROGN
+- QUOTE
+- WHILE
+- IF
+- SETQ
+- LAMBDA
+- +
+- CONS
+- CAR
+- CDR
+- RPLACA
+- RPLACD
+- EVAL
+- PRINT
+- ALL-SYMBOLS
+- EQ (as in pointers)
+- = (numeric)
+- STRING=
+- READ (read a lisp expression)
+- LOAD (load a `.bnl` lisp file)
+- CONCATENATE (strings only at the moment)
+- STREAM-OPEN (open file or network stream)
+- STREAM-CLOSE
+- STREAM-READ
+- STREAM-EOF?
 
 We all miss you bnl :heart:

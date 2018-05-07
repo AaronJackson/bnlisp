@@ -125,6 +125,10 @@ obj_t *read_string() {
       s[i] = '\t';
     } else if ('\\' == c && escaped) { /* ESCAPED BACKWARDS SLASH */
       s[i] = '\\';
+    } else if ('n' == c && escaped) { /* Line feed */
+      s[i] = '\n';
+    } else if ('r' == c && escaped) { /* carriage return */
+      s[i] = '\r';
     } else {
       s[i] = c;
     }

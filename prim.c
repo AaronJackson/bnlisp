@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "obj.h"
@@ -149,6 +154,16 @@ obj_t *primitive_print(env, args)
   return arg;
 }
 
+obj_t *primitive_princ(env, args)
+     obj_t **env, *args;
+{
+  /* being lazy for now... wasn't working for printing string.. hm */
+  obj_t *e = eval(FIRST(args), env);
+  if (TSTRING == e->type)
+    printf("%s", e->value.str);
+  return e;
+}
+
 obj_t *primitive_all_symbols(env, args)
      obj_t **env, *args;
 {
@@ -247,9 +262,6 @@ obj_t *primitive_load(env, args)
   }
   stream_i = stdin;
 
-  /* eval(form, &VM->global_bindings); */
-  /* print(form); */
-
   fclose(fid);
 
   return tru;
@@ -297,10 +309,14 @@ obj_t *primitive_stream_open(env, args)
   obj_t **env, *args;
 {
   char *type;
+  obj_t *eargs;
+
   FILE *stream;
-  int socket;
-  obj_t *x;
-  obj_t *eargs = evlis(args, env);
+  int sock;
+  struct sockaddr_in sock_addr;
+  struct hostent *sock_server;
+
+  eargs = evlis(args, env);
 
   if (CAR(CAR(args))->type != TSYMBOL ||
       0 != strcmp("QUOTE", CAR(CAR(args))->value.str)) {
@@ -315,6 +331,23 @@ obj_t *primitive_stream_open(env, args)
     }
     return alloc_stream(stream);
   } else if (0 == strcmp(type, "TCP")) {
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock_server = gethostbyname(SECOND(eargs)->value.str);
+    if (NULL == sock_server)
+      fuck("No such host");
+
+    bzero((char*)&sock_addr, sizeof(sock_addr));
+    sock_addr.sin_family = AF_INET;
+    bcopy((char*)sock_server->h_addr,
+	  (char*)&sock_addr.sin_addr.s_addr,
+	  sock_server->h_length);
+    sock_addr.sin_port = htons(THIRD(eargs)->value.i);
+
+    if (connect(sock, (struct sockaddr *)&sock_addr,
+		sizeof(struct sockaddr)) < 0)
+      fuck("could not connect to host");
+
+    return alloc_socket(sock);
 
   } else if (0 == strcmp(type, "UDP")) {
 
@@ -334,7 +367,7 @@ obj_t *primitive_stream_close(env, args)
     fclose(CAR(s)->value.stream);
     return tru;
   } else if (TSOCKET == CAR(s)->type) {
-
+    close(CAR(s)->value.i);
     return tru;
   } else {
     fuck("That's not a stream or a socket!");
@@ -345,8 +378,7 @@ obj_t *primitive_stream_close(env, args)
 obj_t *primitive_stream_read(env, args)
   obj_t **env, *args;
 {
-  int c[2];
-
+  char c[2];
   obj_t *s = evlis(args, env);
 
   if (TSTREAM == CAR(s)->type) {
@@ -354,7 +386,12 @@ obj_t *primitive_stream_read(env, args)
     c[1] = 0;
     return alloc_string(c);
   } else if (TSOCKET == CAR(s)->type) {
-    return tru;
+    if (read(CAR(s)->value.i, c, 1) <= 0) {
+      return nil;
+    }
+    c[1] = 0;
+
+    return alloc_string(c);
   } else {
     fuck("That is not a stream or a socket!");
   }
@@ -371,7 +408,10 @@ obj_t *primitive_stream_write(env, args)
 	    CAR(CDR(s))->value.str);
     return tru;
   } else if (TSOCKET == CAR(s)->type) {
-    return nil;
+    write(CAR(s)->value.i,
+	   CAR(CDR(s))->value.str,
+	   strlen(CAR(CDR(s))->value.str));
+    return tru;
   } else {
     fuck("That is not a stream or a socket!");
   }
@@ -389,7 +429,7 @@ obj_t *primitive_stream_iseof(env, args)
     ungetc(c, CAR(s)->value.stream);
     return c == EOF ? tru : nil;
   } else if (TSOCKET == CAR(s)->type) {
-    return tru;
+    return tru; /* always true, no eof */
   } else {
     fuck("That is not a stream or a socket!");
   }

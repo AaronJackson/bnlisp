@@ -144,6 +144,10 @@ void print(o)
         printf("\\\"");
       else if ('\\' == c)
         printf("\\\\");
+      else if ('\n' == c)
+	printf("\\n");
+      else if ('\r' == c)
+	printf("\\r");
       else
         putchar(c);
     }
@@ -182,6 +186,7 @@ void print(o)
 
   case TSOCKET:
     printf("<stream network>");
+    return;
 
   default:
     fuck("print: unknown type");
@@ -239,6 +244,9 @@ void init_lisp ()
   *env = push_env(*env,
                   intern("PRINT"),
                   alloc_primitive(primitive_print));
+  *env = push_env(*env,
+                  intern("PRINC"),
+                  alloc_primitive(primitive_princ));
   *env = push_env(*env,
                   intern("ALL-SYMBOLS"),
                   alloc_primitive(primitive_all_symbols));

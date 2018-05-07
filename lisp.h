@@ -7,7 +7,7 @@
 obj_t *nil;
 obj_t *tru;
 
-#define NUM_OBJECTS 1024
+#define NUM_OBJECTS 1048576
 
 void eval_form();
 obj_t *eval();

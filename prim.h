@@ -15,6 +15,7 @@ obj_t *primitive_cdr();
 obj_t *primitive_rplaca();
 obj_t *primitive_rplacd();
 obj_t *primitive_print();
+obj_t *primitive_princ();
 obj_t *primitive_all_symbols();
 obj_t *primitive_eq();
 obj_t *primitive_number_equals();

@@ -8,6 +8,7 @@ obj_t *primitive_setq();
 obj_t *primitive_if();
 obj_t *primitive_while();
 obj_t *primitive_add();
+obj_t *primitive_subtract();
 obj_t *primitive_eval();
 obj_t *primitive_cons();
 obj_t *primitive_car();

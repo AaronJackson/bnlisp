@@ -100,6 +100,22 @@ obj_t *primitive_add(env, args)
   return alloc_int(sum);
 }
 
+obj_t *primitive_subtract(env, args)
+     obj_t **env, *args;
+{
+  int sum = 0;
+  obj_t *node, *node_val;
+
+  for (node = args; node != nil; node = CDR(node)) {
+    node_val = eval(CAR(node), env);
+    if (TINT != node_val->type) fuck("can only add ints");
+
+    sum -= node_val->value.i;
+  }
+
+  return alloc_int(sum);
+}
+
 obj_t *primitive_eval(env, args)
      obj_t **env, *args;
 {

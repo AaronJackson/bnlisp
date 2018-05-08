@@ -203,6 +203,18 @@ obj_t *primitive_number_equals(env, args)
   return (a->value.i == b->value.i) ? tru : nil;
 }
 
+obj_t *primitive_number_gt(env, args)
+  obj_t **env, *args;
+{
+  obj_t *a, *b;
+  obj_t *eargs = evlis(args, env);
+  a = FIRST(eargs);
+  b = SECOND(eargs);
+  if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
+
+  return (a->value.i > b->value.i) ? tru : nil;
+}
+
 obj_t *primitive_string_equals(env, args)
   obj_t **env, *args;
 {

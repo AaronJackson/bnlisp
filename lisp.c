@@ -257,6 +257,9 @@ void init_lisp ()
                   intern("="),
                   alloc_primitive(primitive_number_equals));
   *env = push_env(*env,
+		  intern(">"),
+		  alloc_primitive(primitive_number_gt));
+  *env = push_env(*env,
 		  intern("STRING="),
 		  alloc_primitive(primitive_string_equals));
   *env = push_env(*env,

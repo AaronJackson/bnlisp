@@ -68,9 +68,16 @@
 (SETQ M '(2 3 (1 2 3 4 5 6)))
 (PRINC "Here is matrix M:\n")
 (MATRIX-PRINT M)
-
 (PRINC "\nHere is the transpose of M:\n")
 (MATRIX-PRINT (MATRIX-TRANSPOSE M))
+
+(PRINC "\n\n\n")
+
+(SETQ V '(1 5 (1 2 3 4 5)))
+(PRINC "Here is column vector V:\n")
+(MATRIX-PRINT V)
+(PRINC "\n... and here is its transpose:\n")
+(MATRIX-PRINT (MATRIX-TRANSPOSE V))
 
 
 ;; $ cat math.bnl | ./lisp  -s

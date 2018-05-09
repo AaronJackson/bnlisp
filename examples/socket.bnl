@@ -1,0 +1,11 @@
+(SETQ p (STREAM-OPEN 'TCP "aaronsplace.co.uk" 80))
+(STREAM-WRITE p "GET / HTTP/1.1\r\n")
+(STREAM-WRITE p "Host: aaronsplace.co.uk\r\n")
+(STREAM-WRITE p "Connection: close\r\n\r\n");
+
+(SETQ last-char "")
+(WHILE (NOT (EQ last-char NIL))
+       (SETQ last-char (STREAM-READ p))
+       (PRINT last-char))
+(STREAM-CLOSE p)
+

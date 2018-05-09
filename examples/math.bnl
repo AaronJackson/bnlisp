@@ -1,0 +1,85 @@
+;; ROW MAJOR MODE MATRIX STUFF
+
+;; matrix definition
+;;        w h elems
+(SETQ M '(2 2 (1 0 0 1)))
+
+;; there is no multiply prim atm
+(SETQ * (LAMBDA (A B)
+		((LAMBDA (C Z A B)
+			 (WHILE (NOT (= C B))
+				(SETQ C (+ C 1))
+				(SETQ Z (+ Z A)))
+			 Z)
+		 0 0 A B)))
+
+(SETQ MATRIX-NUMEL
+      (LAMBDA (MAT)
+	      (* (CAR MAT) (CAR (CDR MAT)))))
+
+(SETQ MATRIX-PRINT
+      (LAMBDA (MAT)
+	      (SETQ count (MATRIX-NUMEL MAT))
+	      (SETQ c 0)
+	      (SETQ cc 0)
+	      (SETQ tail (CAR (CDR (CDR MAT))))
+	      (WHILE (> count c)
+		     (SETQ c (+ c 1))
+		     (IF (= cc (CAR MAT))
+		     	 (PROGN
+				 (SETQ cc 0)
+				 (PRINC "\n"))
+			 ())
+		     (SETQ cc (+ cc 1))
+		     (PRINC (CAR tail))
+		     (PRINC "\t")
+		     (SETQ tail (CDR tail)))
+	      (PRINC "\n")
+	      MAT))
+
+(SETQ MATRIX-GET-IJ
+      (LAMBDA (MAT I J)
+	      (SETQ COUNT 0)
+	      (SETQ IDX (+ (* I (CAR MAT)) J))
+	      (SETQ TAIL (CAR (CDR (CDR MAT))))
+	      (WHILE (NOT (= COUNT IDX))
+		     (SETQ COUNT (+ COUNT 1))
+		     (SETQ TAIL (CDR TAIL)))
+	      (CAR TAIL)))
+
+(SETQ APPEND (LAMBDA (A B)
+		     (IF (EQ A NIL)
+			 B
+			 (CONS (CAR A) (APPEND (CDR A) B)))))
+
+(SETQ MATRIX-TRANSPOSE
+      (LAMBDA (MAT)
+	      (SETQ I 0)
+	      (SETQ M (CAR (CDR (CDR MAT))))
+	      (SETQ OUT ())
+	      (WHILE (NOT (= I (CAR MAT)))
+		     (SETQ J 0)
+		     (WHILE (NOT (= J (CAR (CDR MAT))))
+			    (SETQ OUT (APPEND OUT (CONS (MATRIX-GET-IJ MAT J I) NIL)))
+			    (SETQ J (+ J 1)))
+		     (SETQ I (+ I 1)))
+	      (CONS (CAR (CDR MAT)) (CONS (CAR MAT) (CONS OUT NIL) NIL))))
+
+(SETQ M '(2 3 (1 2 3 4 5 6)))
+(PRINC "Here is matrix M:\n")
+(MATRIX-PRINT M)
+
+(PRINC "\nHere is the transpose of M:\n")
+(MATRIX-PRINT (MATRIX-TRANSPOSE M))
+
+
+;; $ cat math.bnl | ./lisp  -s
+;; welcome to bnlisp
+;; Here is matrix M:
+;; 1	2
+;; 3	4
+;; 5	6
+;;
+;; Here is the transpose of M:
+;; 1	3	5
+;; 2	4	6

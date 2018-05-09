@@ -1,0 +1,4 @@
+(SETQ stream (STREAM-OPEN 'FILE "lib.bnl"))
+(WHILE (NOT (STREAM-EOF? stream))
+       (PRINT (STREAM-READ stream)))
+(STREAM-CLOSE stream)

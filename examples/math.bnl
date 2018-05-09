@@ -23,7 +23,7 @@
 	      (SETQ c 0)
 	      (SETQ cc 0)
 	      (SETQ tail (CAR (CDR (CDR MAT))))
-	      (WHILE (> count c)
+	      (WHILE (NOT (= c count))
 		     (SETQ c (+ c 1))
 		     (IF (= cc (CAR MAT))
 		     	 (PROGN
@@ -65,6 +65,67 @@
 		     (SETQ I (+ I 1)))
 	      (CONS (CAR (CDR MAT)) (CONS (CAR MAT) (CONS OUT NIL) NIL))))
 
+(SETQ MATRIX-GET-ROW
+      (LAMBDA (M R) ;; get row R of matrix M
+	      (SETQ OUT ())
+	      (SETQ COUNT 0)
+	      (WHILE (NOT (= COUNT (CAR M)))
+		     (SETQ OUT (APPEND OUT (CONS (MATRIX-GET-IJ M R COUNT) NIL)))
+		     (SETQ COUNT (+ COUNT 1)))
+	      OUT))
+;;	      (CONS (CAR M) (CONS 1 (CONS OUT NIL) NIL))))
+
+(SETQ MATRIX-GET-COL
+      (LAMBDA (M J) ;; get col J of matrix M
+	      (SETQ OUT ())
+	      (SETQ COUNT 0)
+	      (WHILE (NOT (= COUNT (CAR (CDR M))))
+		     (SETQ OUT (APPEND OUT (CONS (MATRIX-GET-IJ M COUNT J) NIL)))
+		     (SETQ COUNT (+ COUNT 1)))
+	      OUT))
+
+(SETQ SUM
+      (LAMBDA (V)
+	      (SETQ S 0)
+	      (SETQ TAIL V)
+	      (WHILE (NOT (EQ TAIL NIL))
+		     (SETQ S (+ S (CAR TAIL)))
+		     (SETQ TAIL (CDR TAIL)))
+      S))
+
+
+;;	      	      (CONS 1 (CONS (CAR (CDR M))  (CONS OUT NIL) NIL))))
+(SETQ DOT-PRODUCT
+      (LAMBDA (A B)
+	      (SETQ TAIL-A A)
+	      (SETQ TAIL-B B)
+	      (SETQ OUT ())
+	      (WHILE (NOT (EQ TAIL-A NIL))
+		     (SETQ OUT (APPEND OUT (CONS (* (CAR TAIL-A) (CAR TAIL-B)) NIL)))
+		     (SETQ TAIL-A (CDR TAIL-A))
+		     (SETQ TAIL-B (CDR TAIL-B)))
+	      (SUM OUT)))
+
+
+;; assumes dimensions A[x,y] = B[y,z]
+(SETQ MATRIX-MULTIPLY
+      (LAMBDA (A B)
+	      (SETQ OUT-W (CAR (CDR A)))
+	      (SETQ OUT-H (CAR B))
+	      (SETQ OUT ())
+	      (SETQ J 0)
+	      (WHILE (NOT (= J OUT-H))
+		     (SETQ I 0)
+		     (WHILE (NOT (= I OUT-W))
+			    (SETQ OUT
+				  (APPEND OUT (CONS (DOT-PRODUCT
+						     (MATRIX-GET-ROW A I)
+						     (MATRIX-GET-COL B J)) NIL)))
+			    (SETQ I (+ I 1)))
+		     (SETQ J (+ J 1))
+		     )
+	      (CONS OUT-W (CONS OUT-H (CONS OUT NIL)))))
+
 (SETQ M '(2 3 (1 2 3 4 5 6)))
 (PRINC "Here is matrix M:\n")
 (MATRIX-PRINT M)
@@ -78,6 +139,21 @@
 (MATRIX-PRINT V)
 (PRINC "\n... and here is its transpose:\n")
 (MATRIX-PRINT (MATRIX-TRANSPOSE V))
+
+(PRINC "\n\n\n")
+(SETQ M '(2 3 (1 2 3 4 5 6)))
+
+(MATRIX-PRINT M)
+(PRINT M)
+(PRINT (MATRIX-GET-ROW M 2))
+(PRINT (MATRIX-GET-ROW M 0))
+
+(PRINC "\n\n\n")
+(PRINT (DOT-PRODUCT (MATRIX-GET-ROW M 2) (MATRIX-GET-ROW M 0)))
+(PRINC "\n")
+M
+(MATRIX-PRINT (MATRIX-MULTIPLY M (MATRIX-TRANSPOSE M)))
+
 
 
 ;; $ cat math.bnl | ./lisp  -s

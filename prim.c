@@ -177,6 +177,8 @@ obj_t *primitive_princ(env, args)
   obj_t *e = eval(FIRST(args), env);
   if (TSTRING == e->type)
     printf("%s", e->value.str);
+  else if (TINT == e->type)
+    printf("%d", e->value.i);
   return e;
 }
 

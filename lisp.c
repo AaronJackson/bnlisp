@@ -232,6 +232,9 @@ void init_lisp ()
                   intern("-"),
                   alloc_primitive(primitive_subtract));
   *env = push_env(*env,
+                  intern("*"),
+                  alloc_primitive(primitive_multiply)); 
+  *env = push_env(*env,
                   intern("CONS"),
                   alloc_primitive(primitive_cons));
   *env = push_env(*env,

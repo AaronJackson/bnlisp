@@ -132,6 +132,32 @@ obj_t *primitive_subtract(env, args)
     return alloc_float(sumf - sum);
 }
 
+obj_t *primitive_multiply(env, args)
+     obj_t **env, *args;
+{
+  int prod = 1;
+  float prodf = 1;
+  obj_t *node, *node_val;
+
+  for (node = args; node != nil; node = CDR(node)) {
+    node_val = eval(CAR(node), env);
+
+    if (TINT == node_val->type)
+      prod = prod * node_val->value.i;
+    else if (TFLOAT == node_val->type)
+      prodf = prodf * node_val->value.f;
+    else
+      fuck("can only subtract ints or floats");
+  }
+
+  if (0 == prodf)
+    return alloc_int(prod);
+  else
+    if (prodf == prod)
+      return alloc_int((int)prodf * prod);
+    return alloc_float(prodf * prod);
+}
+
 obj_t *primitive_eval(env, args)
      obj_t **env, *args;
 {

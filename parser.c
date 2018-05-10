@@ -215,7 +215,10 @@ obj_t *read_sexp()
       return read_number(c - '0');
     } else if (c == '-' && isdigit(peek())) {
       o = read_number(0);
-      o->value.i = -o->value.i;
+      if (TINT == o->type)
+	o->value.i = -o->value.i;
+      else if (TFLOAT == o->type)
+	o->value.f = -o->value.f;
       return o;
     } else if (c == '"') {
       o = read_string();

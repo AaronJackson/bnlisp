@@ -88,32 +88,48 @@ obj_t *primitive_add(env, args)
      obj_t **env, *args;
 {
   int sum = 0;
+  float sumf = 0;
   obj_t *node, *node_val;
 
   for (node = args; node != nil; node = CDR(node)) {
     node_val = eval(CAR(node), env);
-    if (TINT != node_val->type) fuck("can only add ints");
 
-    sum += node_val->value.i;
+    if (TINT == node_val->type)
+      sum += node_val->value.i;
+    else if (TFLOAT == node_val->type)
+      sumf += node_val->value.f;
+    else
+      fuck("can only add ints or floats");
   }
 
-  return alloc_int(sum);
+  if (0 == sumf)
+    return alloc_int(sum);
+  else
+    return alloc_float(sumf + sum);
 }
 
 obj_t *primitive_subtract(env, args)
      obj_t **env, *args;
 {
   int sum = 0;
+  float sumf = 0;
   obj_t *node, *node_val;
 
   for (node = args; node != nil; node = CDR(node)) {
     node_val = eval(CAR(node), env);
-    if (TINT != node_val->type) fuck("can only add ints");
 
-    sum -= node_val->value.i;
+    if (TINT == node_val->type)
+      sum += node_val->value.i;
+    else if (TFLOAT == node_val->type)
+      sumf += node_val->value.f;
+    else
+      fuck("can only subtract ints or floats");
   }
 
-  return alloc_int(sum);
+  if (0 == sumf)
+    return alloc_int(sum);
+  else
+    return alloc_float(sumf - sum);
 }
 
 obj_t *primitive_eval(env, args)
@@ -179,6 +195,8 @@ obj_t *primitive_princ(env, args)
     printf("%s", e->value.str);
   else if (TINT == e->type)
     printf("%d", e->value.i);
+  else if (TFLOAT == e->type)
+    printf("%f", e->value.f);
   return e;
 }
 
@@ -203,7 +221,10 @@ obj_t *primitive_eq(env, args)
   if (nil == a || tru == a) return tru;
 
   /* numbers */
-  if (TINT == a->type) return (a->value.i == b->value.i) ? tru : nil;
+  if (TINT == a->type)
+    return (a->value.i == b->value.i) ? tru : nil;
+  if (TFLOAT == a->type)
+    return (a->value.f == b->value.f) ? tru : nil;
 
   /* everything else */
   return (a == b) ? tru : nil;
@@ -216,9 +237,17 @@ obj_t *primitive_number_equals(env, args)
   obj_t *eargs = evlis(args, env);
   a = FIRST(eargs);
   b = SECOND(eargs);
-  if (TINT != a->type || TINT != b->type) fuck("can't do = on non-numbers");
 
-  return (a->value.i == b->value.i) ? tru : nil;
+  if (TINT == a->type && TINT == b->type)
+    return (a->value.i == b->value.i) ? tru : nil;
+  if (TFLOAT == a->type && TFLOAT == b->type)
+    return (a->value.f == b->value.f) ? tru : nil;
+  if (TFLOAT == a->type && TINT == b->type)
+    return (a->value.f == b->value.i) ? tru : nil;
+  if (TINT == a->type && TFLOAT == b->type)
+    return (a->value.i == b->value.f) ? tru : nil;
+
+  fuck("can't do = on non-numbers");
 }
 
 obj_t *primitive_number_gt(env, args)

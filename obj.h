@@ -12,6 +12,7 @@ typedef enum {
   TNIL,
   TTRUE,
   TINT,
+  TFLOAT,
   TCONS,
   TSTRING,
   TSYMBOL,
@@ -33,6 +34,9 @@ typedef struct obj {
 
     /* TINT and TSOCKET */
     int i;
+
+    /* TFLOAT */
+    float f;
 
     /* TSTRING */
     char *str;

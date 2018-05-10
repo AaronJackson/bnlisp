@@ -154,14 +154,28 @@ obj_t *read_quote() {
 obj_t *read_number(val)
      int val;
 {
+  /* these two vars are only used if float */
+  float valf = 0;
+  float d = 10;
+
   while (isdigit(peek()))
     val = 10 * val + (getc(stream_i) - '0');
+  if ('.' == peek()) {
+    getc(stream_i);
+    valf = (float)val;
+    while (isdigit(peek())) {
+      valf = valf + ((getc(stream_i) - '0') / d);
+      d = d * 10;
+    }
+    return alloc_float(valf);
+  }
   return alloc_int(val);
 }
 
 /* read in a symbol, whose first char is c */
 obj_t *read_symbol(c)
      char c;
+
 {
   char buf[SYMBOL_MAX_LEN + 1];
   int len = 1;

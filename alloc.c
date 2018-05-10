@@ -27,6 +27,14 @@ obj_t *alloc_int(val)
   return x;
 }
 
+obj_t *alloc_float(val)
+     float val;
+{
+  obj_t * x = alloc_obj(TFLOAT);
+  x->value.f = val;
+  return x;
+}
+
 obj_t * alloc_string(s)
      char * s;
 {

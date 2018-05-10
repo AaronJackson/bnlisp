@@ -72,6 +72,7 @@ obj_t *eval(form, env)
   case TNIL:
   case TTRUE:
   case TINT:
+  case TFLOAT:
   case TSTRING:
   case TPRIMITIVE:
   case TFUNCTION:
@@ -160,6 +161,10 @@ void print(o)
 
   case TINT:
     printf("%d", o->value.i);
+    return;
+
+  case TFLOAT:
+    printf("%f", o->value.f);
     return;
 
   case TTRUE:

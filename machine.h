@@ -1,3 +1,4 @@
+#include <sys/types.h>
 
 #ifndef BNLISP_MACHINE_H
 #define BNLISP_MACHINE_H

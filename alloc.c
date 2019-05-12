@@ -12,7 +12,7 @@ obj_t * alloc_obj(type)
   obj_t *o;
 
   if (VM->alloc_offset == VM->semispace_size) gc();
-  if (VM->alloc_offset == VM->semispace_size) fuck("game over");
+  /*  if (VM->alloc_offset == VM->semispace_size) fuck("game over"); */
 
   o = &VM->from_space[++VM->alloc_offset];
   o->type = type;

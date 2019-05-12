@@ -60,7 +60,7 @@ obj_t *forward(o)
 #endif
 
 void gc() {
-  #if 0
+#if 0
   obj_t *tmp;
   size_t allocated = VM->alloc_offset;
   int i, j;
@@ -95,6 +95,6 @@ void gc() {
 
 
   fprintf(stderr, " done: %zu -> %zu\n", allocated, VM->alloc_offset);
-  #endif
+#endif
   return;
 }

@@ -111,17 +111,27 @@ obj_t *primitive_add(env, args)
 obj_t *primitive_subtract(env, args)
      obj_t **env, *args;
 {
+  obj_t *node, *node_val;
   int sum = 0;
   float sumf = 0;
-  obj_t *node, *node_val;
 
-  for (node = args; node != nil; node = CDR(node)) {
+  node = args;
+  if (nil == node)
+    return alloc_int(0);
+
+  node_val = eval(CAR(node), env);
+  if (TINT == node_val->type)
+    sum += node_val->value.i;
+  else if (TFLOAT == node_val->type)
+    sumf += node_val->value.f;
+
+  for (node = CDR(node); node != nil; node = CDR(node)) {
     node_val = eval(CAR(node), env);
 
     if (TINT == node_val->type)
-      sum += node_val->value.i;
+      sum -= node_val->value.i;
     else if (TFLOAT == node_val->type)
-      sumf += node_val->value.f;
+      sumf -= node_val->value.f;
     else
       fuck("can only subtract ints or floats");
   }
@@ -129,7 +139,7 @@ obj_t *primitive_subtract(env, args)
   if (0 == sumf)
     return alloc_int(sum);
   else
-    return alloc_float(sumf - sum);
+    return alloc_float(sumf + sum);
 }
 
 obj_t *primitive_multiply(env, args)

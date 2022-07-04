@@ -345,5 +345,5 @@ int main (argc, argv)
     }
   }
 
-  exit(1);
+  exit(0);
 }

@@ -1,0 +1,13 @@
+on: [push, pull_request]
+
+jobs:
+  kernel:
+    runs-on: ubuntu-latest
+    name: build bnlisp
+    steps:
+      - uses: AaronJackson/2.11BSD-Action@v1.0
+        with:
+          path: /root
+          run: |
+            make
+            ./lisp < examples/examples.bnl

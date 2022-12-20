@@ -1,5 +1,7 @@
 * bnlisp, a lisp for 2.11BSD
 
+[[https://github.com/aaronjackson/bnlisp/actions/workflows/main.yml/badge.svg]]
+
 #+BEGIN_SRC
 [2017-08-02 19:16:49] <bnl> C is great because it lets me write scheme
 #+END_SRC
